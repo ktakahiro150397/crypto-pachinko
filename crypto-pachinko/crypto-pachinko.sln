@@ -1,9 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35527.113 d17.12
+VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FirebaseAuthTest", "FirebaseAuthTest\FirebaseAuthTest.csproj", "{E1CBE4D5-1BF0-43EE-B3F4-6FC4E7C0B21C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspireSampleApp", "AspireSampleApp\AspireSampleApp.csproj", "{CECCFBE8-D28C-459F-A001-34844150A4DB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "crypto-pachinko.AppHost", "crypto-pachinko.AppHost\crypto-pachinko.AppHost.csproj", "{B81FD100-E04E-42E9-B874-B525447F7269}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "crypto-pachinko.ServiceDefaults", "crypto-pachinko.ServiceDefaults\crypto-pachinko.ServiceDefaults.csproj", "{00BB04A1-160D-4155-9294-28FB339ABF8A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspireSampleApp.DbInitializer", "AspireSampleApp.DbInitializer\AspireSampleApp.DbInitializer.csproj", "{26F38D5C-ACB7-4645-9C61-AFB92ECB7081}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,10 +17,22 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{E1CBE4D5-1BF0-43EE-B3F4-6FC4E7C0B21C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E1CBE4D5-1BF0-43EE-B3F4-6FC4E7C0B21C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E1CBE4D5-1BF0-43EE-B3F4-6FC4E7C0B21C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E1CBE4D5-1BF0-43EE-B3F4-6FC4E7C0B21C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CECCFBE8-D28C-459F-A001-34844150A4DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CECCFBE8-D28C-459F-A001-34844150A4DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CECCFBE8-D28C-459F-A001-34844150A4DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CECCFBE8-D28C-459F-A001-34844150A4DB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B81FD100-E04E-42E9-B874-B525447F7269}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B81FD100-E04E-42E9-B874-B525447F7269}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B81FD100-E04E-42E9-B874-B525447F7269}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B81FD100-E04E-42E9-B874-B525447F7269}.Release|Any CPU.Build.0 = Release|Any CPU
+		{00BB04A1-160D-4155-9294-28FB339ABF8A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{00BB04A1-160D-4155-9294-28FB339ABF8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{00BB04A1-160D-4155-9294-28FB339ABF8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{00BB04A1-160D-4155-9294-28FB339ABF8A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{26F38D5C-ACB7-4645-9C61-AFB92ECB7081}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{26F38D5C-ACB7-4645-9C61-AFB92ECB7081}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{26F38D5C-ACB7-4645-9C61-AFB92ECB7081}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{26F38D5C-ACB7-4645-9C61-AFB92ECB7081}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
