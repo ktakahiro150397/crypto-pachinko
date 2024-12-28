@@ -10,3 +10,13 @@ class BitflyerAPI(CryptoAPIBase):
         getmarkets = self.base_url + 'getmarkets'
         response = requests.get(getmarkets)
         return response.json()
+    
+    def get_board(self, product_code):
+        getboard = self.base_url + 'getboard'
+        response = requests.get(getboard, params={'product_code': product_code})
+        return response.json()
+    
+    def get_ticker(self, product_code):
+        getticker = self.base_url + 'getticker'
+        response = requests.get(getticker, params={'product_code': product_code})
+        return response.json()

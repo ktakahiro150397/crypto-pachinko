@@ -8,3 +8,9 @@ class CryptoAPIBase:
     
     def get_markets(self):
         pass
+    
+    def get_board(self, product_code):
+        pass
+    
+    def get_ticker(self, product_code):
+        pass
