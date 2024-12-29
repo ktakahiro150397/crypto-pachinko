@@ -77,12 +77,13 @@ class LtpNotifier():
                 message = f"{unique_icon} {message_unique}\n{price_info_message}"
                 self.sender.send_message(title,message, message_accent_color=color)
             else:
-                color = MessageSendColor.DEFAULT
-                unique_icon = ":face_with_open_eyes_and_hand_over_mouth:"
+                # color = MessageSendColor.DEFAULT
+                # unique_icon = ":face_with_open_eyes_and_hand_over_mouth:"
                 
-                title = f"{self.product_code}の通知対象外です。"
-                message = f"{unique_icon}通知対象外です。\n{price_info_message}"
-                self.sender.send_message(title,message, message_accent_color=color)
+                # title = f"{self.product_code}の通知対象外です。"
+                # message = f"{unique_icon}通知対象外です。\n{price_info_message}"
+                # self.sender.send_message(title,message, message_accent_color=color)
+                pass
         
             # await interval
             time.sleep(self.check_interval)

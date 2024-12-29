@@ -1,16 +1,13 @@
 services:
-  db:
-    image: mysql:8.0
-    container_name: mysql_container
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: crypto_db
-      MYSQL_USER: crypto_user
-      MYSQL_PASSWORD: crypto_password
-    ports:
-      - "3306:3306"
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: crypto_watcher
     volumes:
-      - db_data:/var/lib/mysql
-
+      - .:/app
+    working_dir: /app
+    env_file:
+      - .env
 volumes:
   db_data:
