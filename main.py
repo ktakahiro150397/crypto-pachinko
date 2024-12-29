@@ -42,11 +42,17 @@ if __name__ == "__main__":
     session = sessionmaker(engine)()
     
     # Insert data
-    test_data = CryptoLtp(
-        product_code="TEST_JPY",
-        ltp=100.0,
-        timestamp=datetime.datetime.now()
-    )
-    session.add(test_data)
-    session.commit()
+    # test_data = CryptoLtp(
+    #     product_code="TEST_JPY",
+    #     ltp=100.0,
+    #     timestamp=datetime.datetime.now()
+    # )
+    # session.add(test_data)
+    # session.commit()
+    
+    # Select data
+    data = session.query(CryptoLtp).all()
+    data = session.query(CryptoLtp).filter(CryptoLtp.product_code=="XRP_JPY").all()
+    for d in data:
+        print(d.product_code, d.ltp, d.timestamp)
     
