@@ -1,6 +1,7 @@
 from enum import Enum
 
 class MessageSendColor(Enum):
+    DEFAULT = 0
     VERY_SHORT = 1
     SHORT = 2
     LONG = 3
@@ -8,6 +9,7 @@ class MessageSendColor(Enum):
 
 def get_color_code(color: MessageSendColor) -> int:
     color_map = {
+        MessageSendColor.DEFAULT: 0x000000,     # Black
         MessageSendColor.VERY_SHORT: 0xf54275,  # Red(Amana)
         MessageSendColor.SHORT: 0xe75bec,       # Pink(Tenka)
         MessageSendColor.LONG: 0xa6cdb6,        # Green(Nichika)

@@ -9,7 +9,7 @@ class MockMessageSender(MessageSenderBase):
 
 @pytest.fixture
 def notifier():
-    return PriceVolatilityNotifier(notifier=MockMessageSender(), threshold_percent=5.0)
+    return PriceVolatilityNotifier(sender=MockMessageSender(), threshold_percent=5.0)
 
 def test_is_notify_true(notifier):
     # Arrange
@@ -20,7 +20,8 @@ def test_is_notify_true(notifier):
     result = notifier.is_notify(previous, latest)
 
     # Assert
-    assert result is True
+    assert result.is_notify is True
+    assert result.volatillity_percent == 10.0
 
 def test_is_notify_false(notifier):
     # Arrange
@@ -31,7 +32,8 @@ def test_is_notify_false(notifier):
     result = notifier.is_notify(previous, latest)
 
     # Assert
-    assert result is False
+    assert result.is_notify is False
+    assert result.volatillity_percent == 4.0
 
 def test_is_notify_previous_none(notifier):
     # Arrange
@@ -42,7 +44,8 @@ def test_is_notify_previous_none(notifier):
     result = notifier.is_notify(previous, latest)
 
     # Assert
-    assert result is False
+    assert result.is_notify is False
+    assert result.volatillity_percent == 0
 
 def test_is_notify_latest_none(notifier):
     # Arrange
@@ -53,7 +56,8 @@ def test_is_notify_latest_none(notifier):
     result = notifier.is_notify(previous, latest)
 
     # Assert
-    assert result is False
+    assert result.is_notify is False
+    assert result.volatillity_percent == 0
 
 def test_is_notify_no_change(notifier):
     # Arrange
@@ -64,7 +68,8 @@ def test_is_notify_no_change(notifier):
     result = notifier.is_notify(previous, latest)
 
     # Assert
-    assert result is False
+    assert result.is_notify is False
+    assert result.volatillity_percent == 0
     
 def test_is_notify_negative_change(notifier):
     # Arrange
@@ -75,4 +80,5 @@ def test_is_notify_negative_change(notifier):
     result = notifier.is_notify(previous, latest)
 
     # Assert
-    assert result is True
+    assert result.is_notify is True
+    assert result.volatillity_percent == -10.0
