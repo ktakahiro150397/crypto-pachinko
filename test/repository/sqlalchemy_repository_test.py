@@ -77,3 +77,21 @@ def test_get_ltp_data_by_delta_various_deltas(repository, session):
     result = repository.get_ltp_data_by_delta(product_code, base_time, 30)
     assert result.latest.ltp == 5000000
     assert result.previous is None # Data within delta of 30 seconds
+    
+def test_add_ltp_data(repository, session):
+    # Arrange
+    product_code = 'BTC_JPY'
+    ltp = 5000000
+    timestamp = datetime.now()
+    cryptoLtp = CryptoLtp(product_code=product_code, ltp=ltp, timestamp=timestamp)
+
+    # Act
+    repository.add_ltp_data(crypto_ltp=cryptoLtp)
+    session.commit()
+
+    # Assert
+    result = session.query(CryptoLtp).filter_by(product_code=product_code).first()
+    assert result is not None
+    assert result.product_code == product_code
+    assert result.ltp == ltp
+    assert result.timestamp == timestamp

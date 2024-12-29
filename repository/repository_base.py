@@ -7,6 +7,15 @@ class RepositoryBase:
     def __init__(self):
         pass
     
+    def add_ltp_data(self,crypto_ltp: CryptoLtp):
+        """最終取引価格を追加します。
+
+        Args:
+            crypto_ltp (CryptoLtp): 登録するデータ
+        """
+        pass
+        
+    
     def get_ltp_data(self,product_code:str)->list[CryptoLtp]:
         """最終取引価格の一覧を取得します。
 

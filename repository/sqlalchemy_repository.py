@@ -7,6 +7,10 @@ from sqlalchemy.orm import Session
 class SqlAlchemyRepository(RepositoryBase):
     def __init__(self,session:Session):
         self.session = session
+        
+    def add_ltp_data(self,crypto_ltp: CryptoLtp):
+        self.session.add(crypto_ltp)
+        self.session.commit()
     
     def get_ltp_data(self,product_code:str)->list[CryptoLtp]:
         return self.session \
