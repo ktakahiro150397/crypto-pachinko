@@ -45,14 +45,14 @@ if __name__ == "__main__":
     retrieve_thread.start()
     
     discord_sender = DiscordMessageSender(DISCORD_WEBHOOK_URL)
-    discord_sender.send_message(":face_with_monocle:Crypto 価格変動監視を開始します...",message_accent_color=MessageSendColor.DEFAULT)
+    discord_sender.send_message(":face_with_monocle:Crypto 価格変動監視くん","価格変動監視を開始します...",message_accent_color=MessageSendColor.DEFAULT)
     
     # 別スレッドで価格情報を確認し、Discordに通知
     ltp_notifier = LtpNotifier(product_code="XRP_JPY",
-                               delta_second=10.0,
+                               delta_second=15.0,
                                repo=repo,
                                sender=discord_sender,
-                               threshold_percent=0.01,
+                               threshold_percent=0.05,
                                check_interval=None)
     notify_thread = threading.Thread(target=ltp_notifier.notify_process)
     notify_thread.setDaemon(True)

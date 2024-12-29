@@ -14,7 +14,7 @@ handlers:
     stream: ext://sys.stdout
   file:
     class: logging.handlers.RotatingFileHandler
-    level: DEBUG
+    level: INFO
     formatter: simple
     filename: log/application.log
     encoding: utf-8

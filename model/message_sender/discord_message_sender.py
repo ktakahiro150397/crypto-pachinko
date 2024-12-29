@@ -15,13 +15,13 @@ class DiscordMessageSender(MessageSenderBase):
         
         logger.debug(f"DiscordMessageSender: webhook_url={self.webhook_url}")
 
-    def send_message(self, message, message_accent_color: MessageSendColor = 3):
+    def send_message(self, title, message, message_accent_color: MessageSendColor = 3):
         payload = {
             # "content": message,
             "username": "Crypto 価格変動通知botくん",
             "embeds": [
                 {
-                    "title": "Crypto 価格変動通知",
+                    "title": title,
                     "description": message,
                     "color": get_color_code(message_accent_color),
                     "timestamp": datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')

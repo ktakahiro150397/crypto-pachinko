@@ -32,7 +32,7 @@ class LtpRetriever():
             try:
                 timestamp = datetime.strptime(date_str, date_format)
             except ValueError as e:
-                logger.error(f"ValueError: {e}")
+                logger.warning(f"ValueError: {e}")
                 timestamp = datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S')
 
             register_data = CryptoLtp(product_code=self.product_code,ltp=ltp,timestamp=timestamp)

@@ -22,6 +22,6 @@ class MessageSenderBase():
     def __init__(self):
         pass
 
-    def send_message(self, message, message_accent_color: MessageSendColor = 3):
-        print(f"MessageSenderBase: {message} / {message_accent_color}")
+    def send_message(self, title, message, message_accent_color: MessageSendColor = 3):
+        print(f"MessageSenderBase: {title} / {message} / {message_accent_color}")
 

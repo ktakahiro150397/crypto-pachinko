@@ -1,4 +1,5 @@
 from datetime import datetime,timezone
+import random
 import time
 from logger_factory import LoggerFactory
 from model.database.crypto_ltp import CryptoLtp
@@ -30,6 +31,31 @@ class LtpNotifier():
             self.check_interval = check_interval
         
         self.price_volatility = PriceVolatilityNotifier(sender=sender,threshold_percent=threshold_percent)
+        
+        self.very_long_description = [
+            "月までぶっとべ！！",
+            "莫大な富の予感",
+            "To the moon!",
+            "buybuybuybuy"
+        ]
+        self.long_description = [
+            "上がれ！",
+            "いけいけ！",
+            "バブれ！",
+            "ぶっとべ！",
+            "それなりの富の予感",
+        ]
+        
+        self.short_description = [
+            "耐えろ！",
+            "切れ！",
+        ]
+        
+        self.very_short_description = [
+            "もう終わりだよこの通貨",
+            "破滅",
+            "解散",
+        ]
     
     def notify_process(self):
         while True:
@@ -39,16 +65,24 @@ class LtpNotifier():
             latest:CryptoLtp = ltp_data.latest
             volatility_result = self.price_volatility.is_notify(previous, latest)
             
+            price_info_message = f"最新価格={latest.ltp:.2f}(id={latest.id})\n直前価格={previous.ltp:.2f}({self.delta_second}秒前)(id={previous.id})\n変動率：{volatility_result.volatillity_percent:.2f}%"
+            
             if volatility_result.is_notify:
                 color = self.__get_message_color(volatility_result.volatillity_percent)
-                prefix = self.__get_message_prefix(color)
-                description = self.__get_message_descrption(color)
+                message_main = self.__get_message_main(color)
+                unique_icon = self.__get_message_prefix(color)
+                message_unique = self.__get_message_unique(color)
                 
-                message = f"{prefix}{self.product_code}の価格が変動しています！{description}\nlatest={latest.ltp:.2f}(id={latest.id}\nprevious={previous.ltp:.2f}(id={previous.id}\n変動率：{volatility_result.volatillity_percent:.2f}%"
-                self.sender.send_message(message, message_accent_color=color)
+                title = f"{message_main}"
+                message = f"{unique_icon} {message_unique}\n{price_info_message}"
+                self.sender.send_message(title,message, message_accent_color=color)
             else:
-                message = f"{self.product_code}の通知対象外です。\nlatest={latest.ltp:.2f}(id={latest.id}\nprevious={previous.ltp:.2f}(id={previous.id}\n変動率：{volatility_result.volatillity_percent:.2f}%"
-                self.sender.send_message(message, message_accent_color=MessageSendColor.DEFAULT)
+                color = MessageSendColor.DEFAULT
+                unique_icon = ":face_with_open_eyes_and_hand_over_mouth:"
+                
+                title = f"{self.product_code}の通知対象外です。"
+                message = f"{unique_icon}通知対象外です。\n{price_info_message}"
+                self.sender.send_message(title,message, message_accent_color=color)
         
             # await interval
             time.sleep(self.check_interval)
@@ -60,10 +94,21 @@ class LtpNotifier():
             else:
                 return MessageSendColor.LONG
         else:
-            if value >= self.price_volatility.threshold_percent * -2:
+            if value <= self.price_volatility.threshold_percent * -2:
                 return MessageSendColor.VERY_SHORT
             else:
                 return MessageSendColor.SHORT
+            
+        
+    def __get_message_main(self,color:MessageSendColor)->str:
+        if color == MessageSendColor.VERY_LONG:
+            return f"{self.product_code}の価格が急上昇中！！"
+        elif color == MessageSendColor.LONG:
+            return f"{self.product_code}の価格が上昇中！"
+        elif color == MessageSendColor.SHORT:
+            return f"{self.product_code}の価格が下降中！"
+        elif color == MessageSendColor.VERY_SHORT:
+            return f"{self.product_code}の価格が急下降中！！"
     
     def __get_message_prefix(self,color:MessageSendColor)->str:
         if color == MessageSendColor.VERY_LONG:
@@ -75,12 +120,15 @@ class LtpNotifier():
         elif color == MessageSendColor.VERY_SHORT:
             return ":face_with_symbols_over_mouth:"
         
-    def __get_message_descrption(self,color:MessageSendColor)->str:
+    def __get_message_unique(self,color:MessageSendColor)->str:
         if color == MessageSendColor.VERY_LONG:
-            return "ぶっとべ〜〜〜〜〜！"
+            message_list = self.very_long_description
         elif color == MessageSendColor.LONG:
-            return "イケイケだ！"
+            message_list = self.long_description
         elif color == MessageSendColor.SHORT:
-            return "耐えろ！"
+            message_list = self.short_description
         elif color == MessageSendColor.VERY_SHORT:
-            return "もう終わりだよこの通貨"
+            message_list = self.very_short_description
+        
+        i = random.randint(0,len(message_list)-1)
+        return message_list[i]
