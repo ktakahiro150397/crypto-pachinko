@@ -401,3 +401,5 @@ FodyWeavers.xsd
 __pypackages__/
 __pycache__/
 .venv/
+
+*.sqlite3
