@@ -22,6 +22,10 @@ logger = LoggerFactory.getLogger(__name__)
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 SQLALCHEMY_DATABASE_URL = os.getenv("SQLALCHEMY_DATABASE_URI")
 
+API_INTERVAL = 10
+DELTA_SECOND = 1 * 60
+THRESHOLD_PERCENT = 0.1
+
 if __name__ == "__main__":
     engine_str = SQLALCHEMY_DATABASE_URL
     engine = create_engine(engine_str)
@@ -39,7 +43,7 @@ if __name__ == "__main__":
     ltp_retriever = LtpRetriever(repo=repo,
                                  api=api,
                                  product_code="XRP_JPY",
-                                 api_interval=0.5)
+                                 api_interval=API_INTERVAL)
     retrieve_thread = threading.Thread(target=ltp_retriever.db_registration_process)
     retrieve_thread.setDaemon(True)
     retrieve_thread.start()
@@ -49,10 +53,10 @@ if __name__ == "__main__":
     
     # 別スレッドで価格情報を確認し、Discordに通知
     ltp_notifier = LtpNotifier(product_code="XRP_JPY",
-                               delta_second=15.0,
+                               delta_second=DELTA_SECOND,
                                repo=repo,
                                sender=discord_sender,
-                               threshold_percent=0.05,
+                               threshold_percent=THRESHOLD_PERCENT,
                                check_interval=None)
     notify_thread = threading.Thread(target=ltp_notifier.notify_process)
     notify_thread.setDaemon(True)
