@@ -22,9 +22,9 @@ logger = LoggerFactory.getLogger(__name__)
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 SQLALCHEMY_DATABASE_URL = os.getenv("SQLALCHEMY_DATABASE_URI")
 
-API_INTERVAL = 10
-DELTA_SECOND = 1 * 60
-THRESHOLD_PERCENT = 0.1
+API_INTERVAL = int(os.getenv("API_INTERVAL",10))
+DELTA_SECONDS = int(os.getenv("DELTA_SECONDS",90))
+THRESHOLD_PERCENT = float(os.getenv("THRESHOLD_PERCENT",0.5))
 
 if __name__ == "__main__":
     engine_str = SQLALCHEMY_DATABASE_URL
@@ -49,11 +49,13 @@ if __name__ == "__main__":
     retrieve_thread.start()
     
     discord_sender = DiscordMessageSender(DISCORD_WEBHOOK_URL)
-    discord_sender.send_message(":face_with_monocle:Crypto 価格変動監視くん","価格変動監視を開始します...",message_accent_color=MessageSendColor.DEFAULT)
+    
+    welcome_message = f"価格変動の監視を開始します...\n監視間隔：{DELTA_SECONDS}秒\n価格変動通知閾値：{THRESHOLD_PERCENT}%"
+    discord_sender.send_message(":face_with_monocle:Crypto 価格変動監視くん",welcome_message,message_accent_color=MessageSendColor.DEFAULT)
     
     # 別スレッドで価格情報を確認し、Discordに通知
     ltp_notifier = LtpNotifier(product_code="XRP_JPY",
-                               delta_second=DELTA_SECOND,
+                               delta_second=DELTA_SECONDS,
                                repo=repo,
                                sender=discord_sender,
                                threshold_percent=THRESHOLD_PERCENT,
