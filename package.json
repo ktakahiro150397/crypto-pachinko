@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "price-collector": "ts-node-dev --respawn --transpile-only src/priceCollector.ts",
     "trading-bot": "ts-node-dev --respawn --transpile-only src/tradingBot.ts",
+    "backtest": "ts-node-dev --transpile-only src/backtest.ts",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "jest"
