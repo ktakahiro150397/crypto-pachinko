@@ -20,6 +20,12 @@
    - 通貨ごとにカスタマイズ可能な取引戦略
    - 常時実行を想定した設計
 
+3. **バックテスト機能** (`src/backtest.ts`) 🆕
+   - 過去データを使った取引戦略の検証
+   - 特定期間（例：2025-10-11）での動作確認
+   - 勝率、損益の詳細分析
+   - 複数戦略の比較が可能
+
 ## 開発環境
 
 ### 必要なツール
@@ -260,6 +266,32 @@ PRICE_COLLECTION_INTERVAL_MS=5000
 CRASH_THRESHOLD_PERCENTAGE=20
 RECOVERY_CHECK_INTERVAL_MS=10000
 ```
+
+## クイックスタートガイド
+
+### シナリオ1: リアルタイム取引システム
+
+```bash
+# ターミナル1: 価格収集を開始
+npm run price-collector
+
+# ターミナル2: 取引ボットを開始
+npm run trading-bot
+```
+
+### シナリオ2: バックテストで戦略を検証
+
+```bash
+# ステップ1: 過去データを準備
+npm run price-collector -- --historical
+
+# ステップ2: 特定期間でバックテスト
+npm run backtest -- 2025-10-01 2025-10-11
+
+# 結果を確認して戦略を調整
+```
+
+詳細は `BACKTEST_EXAMPLE.md` と `BACKTEST_GUIDE.md` を参照してください。
 
 ## 開発
 
