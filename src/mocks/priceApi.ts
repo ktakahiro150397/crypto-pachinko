@@ -50,4 +50,11 @@ export class MockPriceAPI {
     this.basePrices.set(symbol, price);
     this.lastPrices.set(symbol, price);
   }
+
+  /**
+   * Get base price for a symbol
+   */
+  getBasePrice(symbol: string): number {
+    return this.basePrices.get(symbol) || 1000;
+  }
 }
