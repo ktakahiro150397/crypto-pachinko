@@ -28,7 +28,7 @@
 - Docker Desktop
 - Dev Containers extension for VSCode
 
-### セットアップ
+### セットアップ（VSCode DevContainer使用）
 
 1. リポジトリをクローン:
 ```bash
@@ -49,6 +49,32 @@ code .
 4. 依存関係のインストール（自動的に実行されますが、必要に応じて手動で実行）:
 ```bash
 npm install
+```
+
+5. TypeScriptのビルド:
+```bash
+npm run build
+```
+
+### ローカル環境でのセットアップ（DevContainerなし）
+
+1. 必要なツール:
+   - Node.js 20以上
+   - Docker Desktop
+
+2. MySQLコンテナを起動:
+```bash
+docker-compose up -d
+```
+
+3. 依存関係のインストール:
+```bash
+npm install
+```
+
+4. 環境変数の設定:
+```bash
+cp .env.example .env
 ```
 
 5. TypeScriptのビルド:
@@ -233,6 +259,12 @@ npm run lint
 
 ```bash
 npm run format
+```
+
+### テスト
+
+```bash
+npm test
 ```
 
 ## 技術スタック

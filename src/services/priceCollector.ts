@@ -91,7 +91,7 @@ export class PriceCollectorService {
 
     const prices: CryptoPrice[] = [];
     let currentDate = new Date(startDate);
-    let basePrice = this.priceAPI['basePrices'].get(symbol) || 1000;
+    const basePrice = this.priceAPI['basePrices'].get(symbol) || 1000;
 
     while (currentDate <= endDate) {
       // Simulate price variation
