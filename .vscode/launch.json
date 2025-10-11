@@ -2,6 +2,19 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Debug current file",
+      "type": "node",
+      "request": "launch",
+      "program": "${file}",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
       "name": "Debug Backtest",
       "type": "node",
       "request": "launch",

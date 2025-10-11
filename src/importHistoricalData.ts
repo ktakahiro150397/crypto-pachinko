@@ -2,8 +2,9 @@ import dotenv from 'dotenv';
 import { PriceCollectorService } from './services/priceCollector';
 import { IHistoricalDataProvider } from './interfaces/IHistoricalDataProvider';
 import { MockHistoricalDataProvider } from './providers/mockHistoricalDataProvider';
-import { CsvHistoricalDataProvider } from './providers/csvHistoricalDataProvider';
+// import { CsvHistoricalDataProvider } from './providers/csvHistoricalDataProvider';
 import { BinanceHistoricalDataProvider } from './providers/binanceHistoricalDataProvider';
+import { CsvHistoricalFromBinanceDataProvider } from './providers/csvHistoricalDataProvider';
 
 dotenv.config();
 
@@ -17,13 +18,14 @@ function getHistoricalDataProvider(): IHistoricalDataProvider {
     case 'csv': {
       console.log('[HistoricalDataImporter] Using CSV provider');
       const dataDir = process.env.CSV_DATA_DIRECTORY || './data';
-      return new CsvHistoricalDataProvider(dataDir);
+      // return new CsvHistoricalDataProvider(dataDir);
+      return new CsvHistoricalFromBinanceDataProvider(dataDir);
     }
-    
+
     case 'binance':
       console.log('[HistoricalDataImporter] Using Binance API provider');
       return new BinanceHistoricalDataProvider();
-    
+
     case 'mock':
     default:
       console.log('[HistoricalDataImporter] Using Mock provider');
@@ -38,9 +40,15 @@ function getHistoricalDataProvider(): IHistoricalDataProvider {
 async function main() {
   console.log('=== Historical Data Importer ===');
 
-  const symbols = process.argv.slice(2).filter(arg => !arg.startsWith('--'));
+  // Configure environment variables BEFORE calling getHistoricalDataProvider
+  process.env.HISTORICAL_DAYS_BACK = '365';
+  process.env.HISTORICAL_DATA_PROVIDER = 'csv';
+  process.env.CSV_DATA_DIRECTORY = './historical_data/btcusdt';
+
+  const symbols = process.argv.slice(2).filter((arg) => !arg.startsWith('--'));
   if (symbols.length === 0) {
-    symbols.push('BTC', 'ETH', 'XRP');
+    // symbols.push('BTC', 'ETH', 'XRP');
+    symbols.push('BTC');
   }
 
   // Date range
