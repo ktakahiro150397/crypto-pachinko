@@ -18,10 +18,10 @@ async function main() {
   const tradingBot = new TradingBotService();
 
   // Register strategies for each symbol
-  // BTC and ETH use default strategy, XRP uses aggressive strategy
-  tradingBot.registerStrategy('BTC', new DefaultTradingStrategy(crashThreshold));
-  tradingBot.registerStrategy('ETH', new DefaultTradingStrategy(crashThreshold));
-  tradingBot.registerStrategy('XRP', new AggressiveTradingStrategy());
+  // BTC and ETH use default strategy with SL/TP, XRP uses aggressive strategy
+  tradingBot.registerStrategy('BTC', new DefaultTradingStrategy(crashThreshold, 3, 5, 10)); // 5% SL, 10% TP
+  tradingBot.registerStrategy('ETH', new DefaultTradingStrategy(crashThreshold, 3, 5, 10)); // 5% SL, 10% TP
+  tradingBot.registerStrategy('XRP', new AggressiveTradingStrategy(7, 15)); // 7% SL, 15% TP
 
   // Start the trading bot
   console.log(`Starting trading bot (interval: ${intervalMs}ms)`);

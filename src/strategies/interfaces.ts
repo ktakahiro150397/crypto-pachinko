@@ -6,12 +6,11 @@ import { CryptoPrice } from '../types';
  */
 export interface ICrashDetectionStrategy {
   /**
-   * Determines if a crash has occurred based on price data
-   * @param currentPrice Current cryptocurrency price
-   * @param previousDayPrice Price from 24 hours ago
+   * Determines if a crash has occurred based on recent price data
+   * @param recentPrices Array of recent prices (most recent last), should contain at least 50 prices
    * @returns true if a crash is detected
    */
-  isCrash(currentPrice: number, previousDayPrice: number): boolean;
+  isCrash(recentPrices: CryptoPrice[]): boolean;
 
   /**
    * Get the crash threshold percentage
@@ -40,4 +39,32 @@ export interface ITradingStrategy {
   crashDetection: ICrashDetectionStrategy;
   recoveryDetection: IRecoveryDetectionStrategy;
   getStrategyName(): string;
+
+  /**
+   * Get stop loss percentage (if set)
+   * @returns stop loss percentage or null if not set
+   */
+  getStopLossPercentage(): number | null;
+
+  /**
+   * Get take profit percentage (if set)
+   * @returns take profit percentage or null if not set
+   */
+  getTakeProfitPercentage(): number | null;
+
+  /**
+   * Check if stop loss should be triggered
+   * @param entryPrice Original entry price
+   * @param currentPrice Current market price
+   * @returns true if stop loss should be triggered
+   */
+  shouldTriggerStopLoss(entryPrice: number, currentPrice: number): boolean;
+
+  /**
+   * Check if take profit should be triggered
+   * @param entryPrice Original entry price
+   * @param currentPrice Current market price
+   * @returns true if take profit should be triggered
+   */
+  shouldTriggerTakeProfit(entryPrice: number, currentPrice: number): boolean;
 }

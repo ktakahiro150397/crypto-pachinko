@@ -40,7 +40,8 @@ async function main() {
   // const crashThreshold = parseFloat(process.env.CRASH_THRESHOLD_PERCENTAGE || '1');
 
   for (const symbol of symbols) {
-    backtest.registerStrategy(symbol, new DefaultTradingStrategy(10, 3));
+    // Test with more sensitive settings: 2% threshold, 2 consecutive drops, 1% SL, 100% TP
+    backtest.registerStrategy(symbol, new DefaultTradingStrategy(2, 2, 1, 100));
   }
 
   // Run backtest

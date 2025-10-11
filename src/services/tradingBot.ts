@@ -104,6 +104,9 @@ export class TradingBotService {
       source: 'backtest',
     };
 
+    // Check for SL/TP on existing open orders first
+    await this.checkStopLossAndTakeProfit(symbol, currentPrice, strategy);
+
     // Update recent prices
     let recentPrices = this.recentPrices.get(symbol);
     if (!recentPrices) {
@@ -112,8 +115,8 @@ export class TradingBotService {
       this.recentPrices.set(symbol, recentPrices);
     }
     recentPrices.push(currentPrice);
-    // Keep only last 10 prices
-    if (recentPrices.length > 10) {
+    // Keep only last 50 prices for crash detection
+    if (recentPrices.length > 50) {
       recentPrices.shift();
     }
 
@@ -126,7 +129,7 @@ export class TradingBotService {
 
     if (!isInCrash) {
       // Check for crash
-      await this.checkForCrash(symbol, currentPrice, strategy);
+      await this.checkForCrash(symbol, currentPrice, strategy, recentPrices);
     } else {
       console.log(`[TradingBot] ${symbol} is in crash state, checking for recovery...`);
       // Check for recovery
@@ -146,6 +149,9 @@ export class TradingBotService {
       return;
     }
 
+    // Check for SL/TP on existing open orders first
+    await this.checkStopLossAndTakeProfit(symbol, currentPrice, strategy);
+
     // Update recent prices
     let recentPrices = this.recentPrices.get(symbol);
     if (!recentPrices) {
@@ -154,8 +160,8 @@ export class TradingBotService {
       this.recentPrices.set(symbol, recentPrices);
     }
     recentPrices.push(currentPrice);
-    // Keep only last 10 prices
-    if (recentPrices.length > 10) {
+    // Keep only last 50 prices for crash detection
+    if (recentPrices.length > 50) {
       recentPrices.shift();
     }
 
@@ -168,7 +174,7 @@ export class TradingBotService {
 
     if (!isInCrash) {
       // Check for crash
-      await this.checkForCrash(symbol, currentPrice, strategy);
+      await this.checkForCrash(symbol, currentPrice, strategy, recentPrices);
     } else {
       // Check for recovery
       await this.checkForRecovery(symbol, currentPrice, strategy, recentPrices);
@@ -181,31 +187,32 @@ export class TradingBotService {
   private async checkForCrash(
     symbol: string,
     currentPrice: CryptoPrice,
-    strategy: ITradingStrategy
+    strategy: ITradingStrategy,
+    recentPrices: CryptoPrice[]
   ): Promise<void> {
-    const previousDayPrice = await this.priceRepo.getPreviousDayPrice(symbol);
-
-    if (!previousDayPrice) {
-      console.log(`[TradingBot] No previous day price for ${symbol}`);
+    // Need enough price data for crash detection
+    if (recentPrices.length < 4) {
       return;
     }
 
-    const isCrash = strategy.crashDetection.isCrash(currentPrice.price, previousDayPrice.price);
+    const isCrash = strategy.crashDetection.isCrash(recentPrices);
 
     if (isCrash) {
-      const dropPercentage =
-        ((previousDayPrice.price - currentPrice.price) / previousDayPrice.price) * 100;
+      // Calculate drop percentage for logging
+      const startPrice = recentPrices[recentPrices.length - 4].price; // 3 drops = 4 prices
+      const endPrice = currentPrice.price;
+      const dropPercentage = ((startPrice - endPrice) / startPrice) * 100;
 
       console.log(
-        `[TradingBot] CRASH DETECTED for ${symbol}: ${dropPercentage.toFixed(2)}% drop (${previousDayPrice.price.toFixed(2)} -> ${currentPrice.price.toFixed(2)})`
+        `[TradingBot] CRASH DETECTED for ${symbol}: ${dropPercentage.toFixed(2)}% drop (${startPrice.toFixed(2)} -> ${endPrice.toFixed(2)})`
       );
 
       // Record crash event
       await this.crashEventRepo.insertCrashEvent({
         symbol,
         detectedTimestamp: new Date(),
-        previousDayPrice: previousDayPrice.price,
-        currentPrice: currentPrice.price,
+        previousDayPrice: startPrice,
+        currentPrice: endPrice,
         dropPercentage,
       });
 
@@ -252,6 +259,57 @@ export class TradingBotService {
 
       // Reset crash state
       this.crashStates.set(symbol, false);
+    }
+  }
+
+  /**
+   * Check stop loss and take profit conditions for open orders
+   */
+  private async checkStopLossAndTakeProfit(
+    symbol: string,
+    currentPrice: CryptoPrice,
+    strategy: ITradingStrategy
+  ): Promise<void> {
+    const openOrders = await this.orderRepo.getOpenOrders(symbol);
+
+    for (const order of openOrders) {
+      let shouldClose = false;
+      let closeReason = '';
+
+      // Check stop loss
+      if (strategy.shouldTriggerStopLoss(order.entryPrice, currentPrice.price)) {
+        shouldClose = true;
+        closeReason = 'STOP_LOSS';
+        const lossPercentage = ((order.entryPrice - currentPrice.price) / order.entryPrice) * 100;
+        console.log(
+          `[TradingBot] STOP LOSS triggered for ${symbol}: ${lossPercentage.toFixed(2)}% loss (${order.entryPrice.toFixed(2)} -> ${currentPrice.price.toFixed(2)})`
+        );
+      }
+      // Check take profit
+      else if (strategy.shouldTriggerTakeProfit(order.entryPrice, currentPrice.price)) {
+        shouldClose = true;
+        closeReason = 'TAKE_PROFIT';
+        const gainPercentage = ((currentPrice.price - order.entryPrice) / order.entryPrice) * 100;
+        console.log(
+          `[TradingBot] TAKE PROFIT triggered for ${symbol}: ${gainPercentage.toFixed(2)}% gain (${order.entryPrice.toFixed(2)} -> ${currentPrice.price.toFixed(2)})`
+        );
+      }
+
+      if (shouldClose) {
+        // Close the order
+        await this.tradingAPI.closeOrder(order.id!, currentPrice.price);
+
+        order.exitPrice = currentPrice.price;
+        order.exitTimestamp = currentPrice.timestamp; // Use price data timestamp
+        order.status = 'CLOSED';
+        order.profitLoss = currentPrice.price - order.entryPrice;
+
+        await this.orderRepo.updateOrder(order);
+
+        console.log(
+          `[TradingBot] Closed order ${order.id} for ${symbol} (${closeReason}) with P/L: ${order.profitLoss.toFixed(2)}`
+        );
+      }
     }
   }
 
