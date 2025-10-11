@@ -14,7 +14,11 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "jest"
   },
-  "keywords": ["cryptocurrency", "trading", "automation"],
+  "keywords": [
+    "cryptocurrency",
+    "trading",
+    "automation"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
@@ -26,11 +30,12 @@
     "jest": "^29.5.0",
     "prettier": "^3.0.0",
     "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "mysql2": "^3.6.0",
-    "dotenv": "^16.3.0"
+    "dotenv": "^16.3.0",
+    "mysql2": "^3.6.0"
   }
 }

@@ -13,6 +13,7 @@ async function main() {
 
   // Parse command line arguments for date range
   const args = process.argv.slice(2);
+  console.log('Command line arguments:', args); // Debug: Check arguments
   let startDate: Date;
   let endDate: Date;
 
@@ -27,10 +28,11 @@ async function main() {
   }
 
   console.log(`Backtest period: ${startDate.toISOString()} to ${endDate.toISOString()}`);
-  console.log('');
+  console.log(''); // Add breakpoint here to debug date range
 
   // Create backtest service
   const backtest = new BacktestService(startDate, endDate);
+  console.log('BacktestService created'); // Debug: Service creation
 
   // Register trading strategies
   const symbols = ['BTC', 'ETH', 'XRP'];

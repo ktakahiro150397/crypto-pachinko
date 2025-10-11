@@ -44,6 +44,9 @@ export class BacktestService {
     console.log(`Interval: ${intervalMs}ms`);
     console.log('');
 
+    // Initialize trading bot for backtest (without starting interval)
+    await this.initializeTradingBotForBacktest();
+
     // Load historical data for all symbols
     for (const symbol of this.symbols) {
       await this.historicalAPI.loadHistoricalData(symbol, this.startDate, this.endDate);
@@ -106,6 +109,25 @@ export class BacktestService {
     this.printResults(result);
 
     return result;
+  }
+
+  /**
+   * Initialize trading bot for backtest without starting the interval timer
+   */
+  private async initializeTradingBotForBacktest(): Promise<void> {
+    // Initialize recentPrices and crashStates for all symbols
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tradingBotAny = this.tradingBot as any;
+    
+    for (const symbol of this.symbols) {
+      if (!tradingBotAny.strategies.has(symbol)) {
+        throw new Error(`No strategy registered for ${symbol}`);
+      }
+      tradingBotAny.recentPrices.set(symbol, []);
+      tradingBotAny.crashStates.set(symbol, false);
+    }
+    
+    console.log(`[Backtest] Initialized trading bot for ${this.symbols.join(', ')}`);
   }
 
   /**

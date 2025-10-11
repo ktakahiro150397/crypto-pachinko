@@ -100,14 +100,24 @@ export class TradingBotService {
     }
 
     // Update recent prices
-    const recentPrices = this.recentPrices.get(symbol)!;
+    let recentPrices = this.recentPrices.get(symbol);
+    if (!recentPrices) {
+      // Initialize if not exists (for backtest scenarios)
+      recentPrices = [];
+      this.recentPrices.set(symbol, recentPrices);
+    }
     recentPrices.push(currentPrice);
     // Keep only last 10 prices
     if (recentPrices.length > 10) {
       recentPrices.shift();
     }
 
-    const isInCrash = this.crashStates.get(symbol)!;
+    let isInCrash = this.crashStates.get(symbol);
+    if (isInCrash === undefined) {
+      // Initialize if not exists (for backtest scenarios)
+      isInCrash = false;
+      this.crashStates.set(symbol, false);
+    }
 
     if (!isInCrash) {
       // Check for crash
