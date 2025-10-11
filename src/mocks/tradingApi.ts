@@ -35,7 +35,9 @@ export class MockTradingAPI {
     if (!order) {
       // For backtest scenarios, the order might not exist in memory but exists in DB
       // Log a warning but don't throw an error
-      console.log(`[MockTradingAPI] Warning: Order ${orderId} not found in memory, skipping close operation`);
+      console.log(
+        `[MockTradingAPI] Warning: Order ${orderId} not found in memory, skipping close operation`
+      );
       return;
     }
 

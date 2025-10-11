@@ -101,7 +101,7 @@ export class TradingBotService {
       symbol,
       price,
       timestamp,
-      source: 'backtest'
+      source: 'backtest',
     };
 
     // Update recent prices
