@@ -1,0 +1,27 @@
+version: '3.8'
+
+# IMPORTANT: This is for development only. 
+# For production, use environment variables or Docker secrets for passwords.
+# Example: docker-compose.yml with .env file for sensitive data
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-crypto_pachinko}
+      - MYSQL_USER=${MYSQL_USER:-crypto_user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-crypto_pass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./.devcontainer/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+volumes:
+  mysql-data:

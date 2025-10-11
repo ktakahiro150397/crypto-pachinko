@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/workspace:cached
+    command: sleep infinity
+    networks:
+      - crypto-network
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=crypto_user
+      - DB_PASSWORD=crypto_pass
+      - DB_NAME=crypto_pachinko
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - crypto-network
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=crypto_pachinko
+      - MYSQL_USER=crypto_user
+      - MYSQL_PASSWORD=crypto_pass
+    ports:
+      - "3306:3306"
+
+networks:
+  crypto-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
