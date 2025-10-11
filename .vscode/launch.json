@@ -6,7 +6,11 @@
       "type": "node",
       "request": "launch",
       "program": "${file}",
-      "runtimeArgs": ["-r", "ts-node/register"],
+      "preLaunchTask": "npm: build",
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "sourceMaps": true,
       "env": {
         "NODE_ENV": "development"
       },
@@ -18,9 +22,13 @@
       "name": "Debug Backtest",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/src/backtest.ts",
+      "program": "${workspaceFolder}/dist/backtest.js",
       "args": ["2025-10-09", "2025-10-11"],
-      "runtimeArgs": ["-r", "ts-node/register"],
+      "preLaunchTask": "npm: build",
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "sourceMaps": true,
       "env": {
         "NODE_ENV": "development"
       },
@@ -33,9 +41,67 @@
       "name": "Debug Backtest (Custom Date Range)",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/src/backtest.ts",
+      "program": "${workspaceFolder}/dist/backtest.js",
       "args": [],
-      "runtimeArgs": ["-r", "ts-node/register"],
+      "preLaunchTask": "npm: build",
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "sourceMaps": true,
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**"],
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Debug Price Collector",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/dist/priceCollector.js",
+      "preLaunchTask": "npm: build",
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "sourceMaps": true,
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**"],
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Debug Trading Bot",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/dist/tradingBot.js",
+      "preLaunchTask": "npm: build",
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "sourceMaps": true,
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**"],
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Debug Import Historical Data",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/dist/importHistoricalData.js",
+      "preLaunchTask": "npm: build",
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "sourceMaps": true,
       "env": {
         "NODE_ENV": "development"
       },
