@@ -2,6 +2,8 @@ import { PriceRepository } from '../database/repositories';
 import { MockPriceAPI } from '../mocks/priceApi';
 import { CryptoPrice } from '../types';
 import { IPriceAPI } from '../interfaces/IPriceAPI';
+import { IHistoricalDataProvider } from '../interfaces/IHistoricalDataProvider';
+import { MockHistoricalDataProvider } from '../providers/mockHistoricalDataProvider';
 
 /**
  * Service for collecting and storing cryptocurrency prices
@@ -9,12 +11,14 @@ import { IPriceAPI } from '../interfaces/IPriceAPI';
 export class PriceCollectorService {
   private priceRepo: PriceRepository;
   private priceAPI: IPriceAPI;
+  private historicalProvider: IHistoricalDataProvider;
   private isRunning = false;
   private intervalId?: NodeJS.Timeout;
 
-  constructor(priceAPI?: IPriceAPI) {
+  constructor(priceAPI?: IPriceAPI, historicalProvider?: IHistoricalDataProvider) {
     this.priceRepo = new PriceRepository();
     this.priceAPI = priceAPI || new MockPriceAPI();
+    this.historicalProvider = historicalProvider || new MockHistoricalDataProvider();
   }
 
   /**
@@ -78,52 +82,34 @@ export class PriceCollectorService {
   }
 
   /**
-   * Insert historical price data in batch
+   * Insert historical price data in batch using the configured provider
    */
   async insertHistoricalData(
     symbol: string,
     startDate: Date,
-    endDate: Date,
-    intervalMinutes: number = 60
+    endDate: Date
   ): Promise<void> {
     console.log(
-      `[PriceCollector] Inserting historical data for ${symbol} from ${startDate.toISOString()} to ${endDate.toISOString()}`
+      `[PriceCollector] Loading historical data for ${symbol} from ${startDate.toISOString()} to ${endDate.toISOString()}`
     );
 
-    const prices: CryptoPrice[] = [];
-    let currentDate = new Date(startDate);
-    const basePrice = this.priceAPI.getBasePrice ? this.priceAPI.getBasePrice(symbol) : 1000;
+    // Load data from the provider (CSV, API, or mock)
+    const prices = await this.historicalProvider.loadHistoricalData(symbol, startDate, endDate);
 
-    while (currentDate <= endDate) {
-      // Simulate price variation
-      const variation = (Math.random() - 0.5) * 10; // -5% to +5%
-      const price = basePrice * (1 + variation / 100);
-
-      prices.push({
-        symbol,
-        price,
-        timestamp: new Date(currentDate),
-        source: 'historical_batch',
-      });
-
-      // Move to next interval
-      currentDate = new Date(currentDate.getTime() + intervalMinutes * 60 * 1000);
-
-      // Batch insert every 1000 records
-      if (prices.length >= 1000) {
-        await this.priceRepo.insertPrices(prices);
-        console.log(`[PriceCollector] Inserted ${prices.length} historical records`);
-        prices.length = 0;
-      }
+    if (prices.length === 0) {
+      console.log(`[PriceCollector] No data to insert for ${symbol}`);
+      return;
     }
 
-    // Insert remaining prices
-    if (prices.length > 0) {
-      await this.priceRepo.insertPrices(prices);
-      console.log(`[PriceCollector] Inserted ${prices.length} historical records`);
+    // Bulk insert in batches of 1000
+    const batchSize = 1000;
+    for (let i = 0; i < prices.length; i += batchSize) {
+      const batch = prices.slice(i, i + batchSize);
+      await this.priceRepo.insertPrices(batch);
+      console.log(`[PriceCollector] Inserted ${batch.length} records (${i + batch.length}/${prices.length})`);
     }
 
-    console.log('[PriceCollector] Historical data insertion complete');
+    console.log(`[PriceCollector] Historical data insertion complete: ${prices.length} total records`);
   }
 
   /**
@@ -133,3 +119,4 @@ export class PriceCollectorService {
     return this.priceAPI;
   }
 }
+

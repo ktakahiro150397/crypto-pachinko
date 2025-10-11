@@ -22,7 +22,7 @@ async function main() {
     const startDate = new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
 
     for (const symbol of symbols) {
-      await priceCollector.insertHistoricalData(symbol, startDate, endDate, 60); // hourly data
+      await priceCollector.insertHistoricalData(symbol, startDate, endDate);
     }
     console.log('Historical data insertion complete');
   }

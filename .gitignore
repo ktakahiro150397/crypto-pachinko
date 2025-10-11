@@ -407,6 +407,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Data files (keep examples)
+data/*.csv
+!data/*.example
+
 # Build outputs
 build/
 out/

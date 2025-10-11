@@ -10,6 +10,7 @@
     "price-collector": "ts-node-dev --respawn --transpile-only src/priceCollector.ts",
     "trading-bot": "ts-node-dev --respawn --transpile-only src/tradingBot.ts",
     "backtest": "ts-node-dev --transpile-only src/backtest.ts",
+    "import-historical": "ts-node-dev --transpile-only src/importHistoricalData.ts",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "jest"
