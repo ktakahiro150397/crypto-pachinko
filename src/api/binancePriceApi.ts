@@ -2,11 +2,11 @@ import { IPriceAPI } from '../interfaces/IPriceAPI';
 
 /**
  * Binance API implementation for real cryptocurrency price data
- * 
+ *
  * To use this implementation:
  * 1. Install axios: npm install axios
  * 2. Replace MockPriceAPI with BinancePriceAPI in your services
- * 
+ *
  * Example:
  * ```typescript
  * const priceAPI = new BinancePriceAPI();
@@ -15,7 +15,7 @@ import { IPriceAPI } from '../interfaces/IPriceAPI';
  */
 export class BinancePriceAPI implements IPriceAPI {
   private baseUrl = 'https://api.binance.com';
-  
+
   // Symbol mapping: internal symbol -> Binance trading pair
   private symbolMap: Map<string, string> = new Map([
     ['BTC', 'BTCUSDT'],
@@ -30,18 +30,16 @@ export class BinancePriceAPI implements IPriceAPI {
    */
   async getCurrentPrice(symbol: string): Promise<number> {
     const tradingPair = this.symbolMap.get(symbol) || `${symbol}USDT`;
-    
+
     try {
       // Using native fetch (available in Node.js 18+)
-      const response = await fetch(
-        `${this.baseUrl}/api/v3/ticker/price?symbol=${tradingPair}`
-      );
-      
+      const response = await fetch(`${this.baseUrl}/api/v3/ticker/price?symbol=${tradingPair}`);
+
       if (!response.ok) {
         throw new Error(`Binance API error: ${response.status} ${response.statusText}`);
       }
-      
-      const data = await response.json() as { symbol: string; price: string };
+
+      const data = (await response.json()) as { symbol: string; price: string };
       return parseFloat(data.price);
     } catch (error) {
       console.error(`[BinancePriceAPI] Error fetching price for ${symbol}:`, error);
@@ -68,5 +66,9 @@ export class BinancePriceAPI implements IPriceAPI {
    */
   addSymbolMapping(symbol: string, tradingPair: string): void {
     this.symbolMap.set(symbol, tradingPair);
+  }
+
+  getSourceName(): string {
+    return 'binance_realtime';
   }
 }

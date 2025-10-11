@@ -66,7 +66,7 @@ export class PriceCollectorService {
           symbol,
           price,
           timestamp: new Date(),
-          source: 'mock_api',
+          source: this.priceAPI.getSourceName ? this.priceAPI.getSourceName() : 'unknown',
         });
       }
 
@@ -84,11 +84,7 @@ export class PriceCollectorService {
   /**
    * Insert historical price data in batch using the configured provider
    */
-  async insertHistoricalData(
-    symbol: string,
-    startDate: Date,
-    endDate: Date
-  ): Promise<void> {
+  async insertHistoricalData(symbol: string, startDate: Date, endDate: Date): Promise<void> {
     console.log(
       `[PriceCollector] Loading historical data for ${symbol} from ${startDate.toISOString()} to ${endDate.toISOString()}`
     );
@@ -106,10 +102,14 @@ export class PriceCollectorService {
     for (let i = 0; i < prices.length; i += batchSize) {
       const batch = prices.slice(i, i + batchSize);
       await this.priceRepo.insertPrices(batch);
-      console.log(`[PriceCollector] Inserted ${batch.length} records (${i + batch.length}/${prices.length})`);
+      console.log(
+        `[PriceCollector] Inserted ${batch.length} records (${i + batch.length}/${prices.length})`
+      );
     }
 
-    console.log(`[PriceCollector] Historical data insertion complete: ${prices.length} total records`);
+    console.log(
+      `[PriceCollector] Historical data insertion complete: ${prices.length} total records`
+    );
   }
 
   /**
@@ -119,4 +119,3 @@ export class PriceCollectorService {
     return this.priceAPI;
   }
 }
-

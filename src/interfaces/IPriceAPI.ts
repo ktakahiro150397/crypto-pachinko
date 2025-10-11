@@ -16,4 +16,10 @@ export interface IPriceAPI {
    * @returns number - Base price
    */
   getBasePrice?(symbol: string): number;
+
+  /**
+   * Get the name of the price source (e.g., 'binance', 'coinbase')
+   * @returns string - Name of the price source
+   */
+  getSourceName?(): string;
 }

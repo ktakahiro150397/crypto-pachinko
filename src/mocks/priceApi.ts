@@ -59,4 +59,8 @@ export class MockPriceAPI implements IPriceAPI {
   getBasePrice(symbol: string): number {
     return this.basePrices.get(symbol) || 1000;
   }
+
+  getSourceName(): string {
+    return 'mock';
+  }
 }

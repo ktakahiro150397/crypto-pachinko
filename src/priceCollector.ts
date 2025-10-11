@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { PriceCollectorService } from './services/priceCollector';
+import { BinancePriceAPI } from './api/binancePriceApi';
 
 dotenv.config();
 
@@ -13,7 +14,8 @@ async function main() {
   const symbols = ['BTC', 'ETH', 'XRP'];
   const intervalMs = parseInt(process.env.PRICE_COLLECTION_INTERVAL_MS || '5000');
 
-  const priceCollector = new PriceCollectorService();
+  const binanceApi = new BinancePriceAPI();
+  const priceCollector = new PriceCollectorService(binanceApi);
 
   // Example: Insert historical data for the last 7 days
   if (process.argv.includes('--historical')) {
