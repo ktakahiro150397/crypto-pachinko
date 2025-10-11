@@ -1,4 +1,8 @@
-import { ICrashDetectionStrategy, IRecoveryDetectionStrategy, ITradingStrategy } from './interfaces';
+import {
+  ICrashDetectionStrategy,
+  IRecoveryDetectionStrategy,
+  ITradingStrategy,
+} from './interfaces';
 import { CryptoPrice } from '../types';
 
 /**
@@ -47,10 +51,7 @@ export class DefaultTradingStrategy implements ITradingStrategy {
   public crashDetection: ICrashDetectionStrategy;
   public recoveryDetection: IRecoveryDetectionStrategy;
 
-  constructor(
-    crashThresholdPercentage: number = 20,
-    recoveryConsecutiveIncreases: number = 3
-  ) {
+  constructor(crashThresholdPercentage: number = 20, recoveryConsecutiveIncreases: number = 3) {
     this.crashDetection = new PercentageDropCrashDetection(crashThresholdPercentage);
     this.recoveryDetection = new ConsecutiveIncreaseRecoveryDetection(recoveryConsecutiveIncreases);
   }

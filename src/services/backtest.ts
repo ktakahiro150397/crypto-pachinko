@@ -1,15 +1,12 @@
 import { PriceRepository } from '../database/repositories';
-import { HistoricalPriceAPI } from '../mocks/historicalPriceApi';
 import { TradingBotService } from './tradingBot';
 import { ITradingStrategy } from '../strategies/interfaces';
-import { CryptoPrice } from '../types';
 
 /**
  * Backtest service for testing trading strategies on historical data
  */
 export class BacktestService {
   private priceRepo: PriceRepository;
-  private historicalAPI: HistoricalPriceAPI;
   private tradingBot: TradingBotService;
   private symbols: string[];
   private startDate: Date;
@@ -17,7 +14,6 @@ export class BacktestService {
 
   constructor(startDate: Date, endDate: Date) {
     this.priceRepo = new PriceRepository();
-    this.historicalAPI = new HistoricalPriceAPI(startDate);
     this.tradingBot = new TradingBotService();
     this.symbols = [];
     this.startDate = new Date(startDate);
@@ -47,51 +43,26 @@ export class BacktestService {
     // Initialize trading bot for backtest (without starting interval)
     await this.initializeTradingBotForBacktest();
 
-    // Load historical data for all symbols
-    for (const symbol of this.symbols) {
-      await this.historicalAPI.loadHistoricalData(symbol, this.startDate, this.endDate);
-    }
-
-    // Insert historical prices into database for the trading bot to read
     let totalPrices = 0;
     const startTime = Date.now();
     
-    // Process data in chronological order
-    while (this.historicalAPI.hasMoreData(this.symbols[0])) {
-      const prices: CryptoPrice[] = [];
-
-      // Get next price for each symbol
-      for (const symbol of this.symbols) {
-        if (this.historicalAPI.hasMoreData(symbol)) {
-          const nextPrice = await this.historicalAPI.peekNextPrice(symbol);
-          if (nextPrice) {
-            // Get the price value and advance index
-            const price = await this.historicalAPI.getCurrentPrice(symbol);
-            prices.push({
-              symbol,
-              price,
-              timestamp: nextPrice.timestamp,
-              source: 'backtest',
-            });
-            totalPrices++;
-          }
-        }
-      }
-
-      if (prices.length > 0) {
-        // Store prices in database
-        await this.priceRepo.insertPrices(prices);
-
-        // Process trading signals
-        await this.processTradingSignalsForBacktest();
-
+    // Get all historical prices from DB in chronological order
+    for (const symbol of this.symbols) {
+      const allPrices = await this.priceRepo.getPricesByTimeRange(symbol, this.startDate, this.endDate);
+      console.log(`[BacktestService] Found ${allPrices.length} historical prices for ${symbol} in DB`);
+      
+      // Process each price sequentially
+      for (const priceData of allPrices) {
+        // Call the trading bot with the current price (same as production)
+        await this.tradingBot.processPrice(symbol, priceData.price, priceData.timestamp);
+        
+        totalPrices++;
+        
         // Show progress every 100 iterations
         if (totalPrices % 100 === 0) {
-          const progress = this.historicalAPI.getProgress(this.symbols[0]);
+          const progress = (totalPrices / allPrices.length) * 100;
           console.log(`Progress: ${progress.toFixed(1)}% (${totalPrices} prices processed)`);
         }
-      } else {
-        break;
       }
     }
 
@@ -131,17 +102,6 @@ export class BacktestService {
   }
 
   /**
-   * Process trading signals without real-time delay
-   */
-  private async processTradingSignalsForBacktest(): Promise<void> {
-    // Use reflection to call private method (for backtest only)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tradingBotAny = this.tradingBot as any;
-    if (tradingBotAny.processTradingSignals) {
-      await tradingBotAny.processTradingSignals(this.symbols);
-    }
-  }
-
   /**
    * Get backtest results
    */
@@ -168,18 +128,19 @@ export class BacktestService {
         await this.tradingBot.closeOpenOrders(symbol);
       }
 
-      // Get all orders for this symbol (we need to query all, not just open)
-      // This is a simplified version - in a real implementation, you'd add a method to get all orders
+      // Get all orders for this symbol created during the backtest period
       const db = this.tradingBot['orderRepo']['db'];
       const query = `
         SELECT id, symbol, order_type as orderType, entry_price as entryPrice,
                entry_timestamp as entryTimestamp, exit_price as exitPrice,
                exit_timestamp as exitTimestamp, status, strategy, profit_loss as profitLoss
         FROM trading_orders
-        WHERE symbol = ?
+        WHERE symbol = ? 
+        AND entry_timestamp >= ? 
+        AND entry_timestamp <= ?
         ORDER BY entry_timestamp ASC
       `;
-      const [rows] = await db.getPool().execute(query, [symbol]);
+      const [rows] = await db.getPool().execute(query, [symbol, this.startDate, this.endDate]);
       
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       for (const row of rows as any[]) {

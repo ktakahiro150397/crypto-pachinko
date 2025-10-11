@@ -35,11 +35,12 @@ async function main() {
   console.log('BacktestService created'); // Debug: Service creation
 
   // Register trading strategies
-  const symbols = ['BTC', 'ETH', 'XRP'];
-  const crashThreshold = parseFloat(process.env.CRASH_THRESHOLD_PERCENTAGE || '20');
+  const symbols = ['BTC'];
+  // const symbols = ['BTC', 'ETH', 'XRP'];
+  // const crashThreshold = parseFloat(process.env.CRASH_THRESHOLD_PERCENTAGE || '1');
 
   for (const symbol of symbols) {
-    backtest.registerStrategy(symbol, new DefaultTradingStrategy(crashThreshold));
+    backtest.registerStrategy(symbol, new DefaultTradingStrategy(10, 3));
   }
 
   // Run backtest

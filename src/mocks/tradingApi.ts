@@ -33,7 +33,10 @@ export class MockTradingAPI {
   async closeOrder(orderId: number, exitPrice: number): Promise<void> {
     const order = this.orders.get(orderId);
     if (!order) {
-      throw new Error(`Order ${orderId} not found`);
+      // For backtest scenarios, the order might not exist in memory but exists in DB
+      // Log a warning but don't throw an error
+      console.log(`[MockTradingAPI] Warning: Order ${orderId} not found in memory, skipping close operation`);
+      return;
     }
 
     order.exitPrice = exitPrice;

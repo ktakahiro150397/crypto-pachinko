@@ -88,6 +88,53 @@ export class TradingBotService {
   }
 
   /**
+   * Process trading logic for a single symbol with a specific price (for backtesting)
+   */
+  async processPrice(symbol: string, price: number, timestamp: Date): Promise<void> {
+    const strategy = this.strategies.get(symbol);
+    if (!strategy) {
+      console.log(`[TradingBot] No strategy registered for ${symbol}`);
+      return;
+    }
+
+    const currentPrice: CryptoPrice = {
+      symbol,
+      price,
+      timestamp,
+      source: 'backtest'
+    };
+
+    // Update recent prices
+    let recentPrices = this.recentPrices.get(symbol);
+    if (!recentPrices) {
+      // Initialize if not exists (for backtest scenarios)
+      recentPrices = [];
+      this.recentPrices.set(symbol, recentPrices);
+    }
+    recentPrices.push(currentPrice);
+    // Keep only last 10 prices
+    if (recentPrices.length > 10) {
+      recentPrices.shift();
+    }
+
+    let isInCrash = this.crashStates.get(symbol);
+    if (isInCrash === undefined) {
+      // Initialize if not exists (for backtest scenarios)
+      isInCrash = false;
+      this.crashStates.set(symbol, false);
+    }
+
+    if (!isInCrash) {
+      // Check for crash
+      await this.checkForCrash(symbol, currentPrice, strategy);
+    } else {
+      console.log(`[TradingBot] ${symbol} is in crash state, checking for recovery...`);
+      // Check for recovery
+      await this.checkForRecovery(symbol, currentPrice, strategy, recentPrices);
+    }
+  }
+
+  /**
    * Process trading logic for a single symbol
    */
   private async processSymbol(symbol: string): Promise<void> {
@@ -195,7 +242,7 @@ export class TradingBotService {
         symbol,
         orderType: 'LONG',
         entryPrice: currentPrice.price,
-        entryTimestamp: new Date(),
+        entryTimestamp: currentPrice.timestamp, // Use price data timestamp instead of current time
         status: 'OPEN',
         strategy: strategy.getStrategyName(),
       };
