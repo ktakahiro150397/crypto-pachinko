@@ -1,11 +1,12 @@
 import { PriceRepository } from '../database/repositories';
 import { CryptoPrice } from '../types';
+import { IPriceAPI } from '../interfaces/IPriceAPI';
 
 /**
  * Historical price API service
  * Returns historical price data from database for backtesting
  */
-export class HistoricalPriceAPI {
+export class HistoricalPriceAPI implements IPriceAPI {
   private priceRepo: PriceRepository;
   private currentTimestamp: Date;
   private priceCache: Map<string, CryptoPrice[]> = new Map();

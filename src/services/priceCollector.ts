@@ -1,17 +1,18 @@
 import { PriceRepository } from '../database/repositories';
 import { MockPriceAPI } from '../mocks/priceApi';
 import { CryptoPrice } from '../types';
+import { IPriceAPI } from '../interfaces/IPriceAPI';
 
 /**
  * Service for collecting and storing cryptocurrency prices
  */
 export class PriceCollectorService {
   private priceRepo: PriceRepository;
-  private priceAPI: MockPriceAPI;
+  private priceAPI: IPriceAPI;
   private isRunning = false;
   private intervalId?: NodeJS.Timeout;
 
-  constructor(priceAPI?: MockPriceAPI) {
+  constructor(priceAPI?: IPriceAPI) {
     this.priceRepo = new PriceRepository();
     this.priceAPI = priceAPI || new MockPriceAPI();
   }
@@ -91,7 +92,7 @@ export class PriceCollectorService {
 
     const prices: CryptoPrice[] = [];
     let currentDate = new Date(startDate);
-    const basePrice = this.priceAPI.getBasePrice(symbol);
+    const basePrice = this.priceAPI.getBasePrice ? this.priceAPI.getBasePrice(symbol) : 1000;
 
     while (currentDate <= endDate) {
       // Simulate price variation
@@ -126,9 +127,9 @@ export class PriceCollectorService {
   }
 
   /**
-   * Get the mock price API instance (for testing/simulation)
+   * Get the price API instance (for testing/simulation)
    */
-  getMockAPI(): MockPriceAPI {
+  getPriceAPI(): IPriceAPI {
     return this.priceAPI;
   }
 }

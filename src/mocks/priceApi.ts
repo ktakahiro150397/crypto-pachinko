@@ -1,8 +1,10 @@
+import { IPriceAPI } from '../interfaces/IPriceAPI';
+
 /**
  * Mock price API service
  * Simulates real-time cryptocurrency price data
  */
-export class MockPriceAPI {
+export class MockPriceAPI implements IPriceAPI {
   private basePrices: Map<string, number> = new Map([
     ['BTC', 50000],
     ['ETH', 3000],
