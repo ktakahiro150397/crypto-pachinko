@@ -75,11 +75,11 @@
 2. **デバッグ構成を選択**
    - VSCodeのデバッグパネル（Ctrl/Cmd + Shift + D）を開く
    - 以下のいずれかを選択:
-     - `Debug Backtest` - バックテストスクリプト
-     - `Debug Price Collector` - 価格収集スクリプト
-     - `Debug Trading Bot` - 取引ボットスクリプト
-     - `Debug Import Historical Data` - 履歴データインポート
-     - `Debug current file` - 現在開いているファイル
+     - `Debug Backtest` - バックテストスクリプト（推奨：ソースマップ使用）
+     - `Debug Price Collector` - 価格収集スクリプト（推奨：ソースマップ使用）
+     - `Debug Trading Bot` - 取引ボットスクリプト（推奨：ソースマップ使用）
+     - `Debug Import Historical Data` - 履歴データインポート（推奨：ソースマップ使用）
+     - `Debug current file (ts-node)` - 現在開いているファイル（クイックテスト用）
 
 3. **デバッグ開始**
    - F5キーを押すか、デバッグパネルの「開始」ボタンをクリック
@@ -129,12 +129,14 @@ launch.jsonの`preLaunchTask`が正しく設定されているか確認:
 
 ### 利用可能なデバッグ構成
 
-- **Debug current file** - 現在開いているTypeScriptファイルをデバッグ
+- **Debug current file (ts-node)** - 現在開いているTypeScriptファイルをts-nodeで直接デバッグ（クイックテスト用）
 - **Debug Backtest** - バックテストスクリプト（デフォルト日付範囲）
 - **Debug Backtest (Custom Date Range)** - バックテストスクリプト（カスタム日付範囲）
 - **Debug Price Collector** - 価格収集スクリプト
 - **Debug Trading Bot** - 取引ボットスクリプト
 - **Debug Import Historical Data** - 履歴データインポートスクリプト
+
+**注意:** "Debug current file (ts-node)" はts-nodeを使用するため、TypeScriptを直接実行します。その他の構成はコンパイル済みのJavaScriptファイルとソースマップを使用します。本番環境に近い動作を確認する場合は、専用の構成（Debug Backtest等）を使用してください。
 
 ### 参考情報
 
