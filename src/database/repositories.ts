@@ -5,15 +5,29 @@ import { RowDataPacket, ResultSetHeader } from 'mysql2';
 export class PriceRepository {
   private db = Database.getInstance();
 
+  /**
+   * 時間のミリ秒を切り捨てるヘルパー関数
+   */
+  private truncateMilliseconds(date: Date): Date {
+    const truncated = new Date(date);
+    truncated.setMilliseconds(0);
+    return truncated;
+  }
+
   async insertPrice(price: CryptoPrice): Promise<number> {
+    const truncatedTimestamp = this.truncateMilliseconds(price.timestamp);
+    
     const query = `
       INSERT INTO crypto_prices (symbol, price, timestamp, source)
       VALUES (?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        price = VALUES(price),
+        source = VALUES(source)
     `;
     const [result] = await this.db.getPool().execute<ResultSetHeader>(query, [
       price.symbol,
       price.price,
-      price.timestamp,
+      truncatedTimestamp,
       price.source,
     ]);
     return result.insertId;
@@ -25,8 +39,16 @@ export class PriceRepository {
     const query = `
       INSERT INTO crypto_prices (symbol, price, timestamp, source)
       VALUES ?
+      ON DUPLICATE KEY UPDATE
+        price = VALUES(price),
+        source = VALUES(source)
     `;
-    const values = prices.map((p) => [p.symbol, p.price, p.timestamp, p.source]);
+    const values = prices.map((p) => [
+      p.symbol, 
+      p.price, 
+      this.truncateMilliseconds(p.timestamp), 
+      p.source
+    ]);
     await this.db.getPool().query(query, [values]);
   }
 
@@ -171,6 +193,10 @@ export class CrashEventRepository {
       INSERT INTO crash_events 
       (symbol, detected_timestamp, previous_day_price, current_price, drop_percentage)
       VALUES (?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        previous_day_price = VALUES(previous_day_price),
+        current_price = VALUES(current_price),
+        drop_percentage = VALUES(drop_percentage)
     `;
     const [result] = await this.db.getPool().execute<ResultSetHeader>(query, [
       event.symbol,

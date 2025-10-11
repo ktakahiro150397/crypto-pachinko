@@ -7,9 +7,9 @@ CREATE TABLE IF NOT EXISTS crypto_prices (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     symbol VARCHAR(20) NOT NULL,
     price DECIMAL(20, 8) NOT NULL,
-    timestamp DATETIME(3) NOT NULL,
+    timestamp DATETIME NOT NULL,
     source VARCHAR(50) NOT NULL DEFAULT 'unknown',
-    INDEX idx_symbol_timestamp (symbol, timestamp),
+    UNIQUE KEY uk_symbol_timestamp (symbol, timestamp),
     INDEX idx_timestamp (timestamp)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -37,5 +37,6 @@ CREATE TABLE IF NOT EXISTS crash_events (
     previous_day_price DECIMAL(20, 8) NOT NULL,
     current_price DECIMAL(20, 8) NOT NULL,
     drop_percentage DECIMAL(5, 2) NOT NULL,
+    UNIQUE KEY uk_symbol_timestamp (symbol, detected_timestamp),
     INDEX idx_symbol_timestamp (symbol, detected_timestamp)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
