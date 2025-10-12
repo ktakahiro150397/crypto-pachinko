@@ -259,6 +259,18 @@ DB_USER=crypto_user
 DB_PASSWORD=crypto_pass
 DB_NAME=crypto_pachinko
 
+# 価格API設定
+PRICE_API_TYPE=mock  # mock, binance
+
+# 取引API設定
+TRADING_API_TYPE=mock  # mock, hyperliquid
+
+# Hyperliquid設定（TRADING_API_TYPE=hyperliquidの場合に必要）
+HYPERLIQUID_PRIVATE_KEY=  # プライベートキー（必須）
+HYPERLIQUID_TESTNET=true  # テストネット使用
+HYPERLIQUID_WALLET_ADDRESS=  # API Agentウォレット使用時のみ
+HYPERLIQUID_VAULT_ADDRESS=   # Vault取引時のみ
+
 # 価格収集設定
 PRICE_COLLECTION_INTERVAL_MS=5000
 
@@ -329,12 +341,54 @@ npm test
 
 ## モックAPI
 
-現在、価格取得APIと取引APIはモックとして実装されています:
+### 価格取得API
 
-- **MockPriceAPI**: ランダムな価格変動をシミュレート
-- **MockTradingAPI**: 注文の記録と管理をシミュレート
+現在、価格取得APIはモックと実装例が提供されています:
 
-実際のAPI（例: Binance、Coinbase）に接続する場合は、これらのクラスを実装に置き換えてください。
+- **MockPriceAPI**: ランダムな価格変動をシミュレート（テスト用）
+- **BinancePriceAPI**: Binance公開APIの実装例
+
+環境変数 `PRICE_API_TYPE` で切り替え可能（`mock`、`binance`）。
+
+### 取引API
+
+取引APIはモックとHyperliquid DEXの実装が提供されています:
+
+- **MockTradingAPI**: 注文の記録と管理をシミュレート（テスト用）
+- **HyperliquidTradingAPI**: Hyperliquid DEXでの実際の取引を実行
+
+環境変数 `TRADING_API_TYPE` で切り替え可能（`mock`、`hyperliquid`）。
+
+#### Hyperliquid取引APIの使用方法
+
+1. **.envファイルを設定**:
+```env
+# 取引API設定
+TRADING_API_TYPE=hyperliquid
+
+# Hyperliquid設定
+HYPERLIQUID_PRIVATE_KEY=your_private_key_here
+HYPERLIQUID_TESTNET=true  # テストネット使用（本番環境ではfalse）
+HYPERLIQUID_WALLET_ADDRESS=  # API Agentウォレット使用時のみ必要
+HYPERLIQUID_VAULT_ADDRESS=   # Vault取引時のみ必要
+```
+
+2. **取引ボットを起動**:
+```bash
+npm run trading-bot
+```
+
+3. **注意事項**:
+   - プライベートキーは絶対に`.env.example`にコミットしないでください
+   - `.gitignore`で`.env`は除外されています
+   - テストネットで十分にテストしてから本番環境を使用してください
+   - HyperliquidはDEXのため、API用に作成したウォレットで取引を行います
+
+#### 全注文クローズ機能
+
+すべての取引API実装は`closeAllOrders()`メソッドをサポートしており、すべてのオープンポジションを一括でクローズできます。
+
+詳細は `REAL_API_GUIDE.md` を参照してください。
 
 ## ライセンス
 
