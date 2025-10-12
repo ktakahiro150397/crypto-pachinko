@@ -72,6 +72,27 @@ describe('MockTradingAPI', () => {
     expect(btcOrders.length).toBe(2);
     expect(btcOrders.every((o) => o.symbol === 'BTC')).toBe(true);
   });
+
+  test('should close all open orders', async () => {
+    // Create some orders
+    await tradingAPI.executeLongOrder('BTC', 50000, 'TestStrategy');
+    await tradingAPI.executeLongOrder('BTC', 51000, 'TestStrategy');
+    await tradingAPI.executeLongOrder('ETH', 3000, 'TestStrategy');
+
+    // Verify we have open orders
+    expect(tradingAPI.getAllOrders().filter((o) => o.status === 'OPEN').length).toBe(3);
+
+    // Close all orders
+    await tradingAPI.closeAllOrders();
+
+    // Verify all orders are closed
+    const openOrders = tradingAPI.getAllOrders().filter((o) => o.status === 'OPEN');
+    expect(openOrders.length).toBe(0);
+
+    // Verify orders are marked as CLOSED
+    const closedOrders = tradingAPI.getAllOrders().filter((o) => o.status === 'CLOSED');
+    expect(closedOrders.length).toBe(3);
+  });
 });
 
 describe('Trading Strategies', () => {

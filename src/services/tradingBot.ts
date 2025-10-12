@@ -1,4 +1,5 @@
 import { PriceRepository, OrderRepository, CrashEventRepository } from '../database/repositories';
+import { ITradingAPI } from '../interfaces/ITradingAPI';
 import { MockTradingAPI } from '../mocks/tradingApi';
 import { ITradingStrategy } from '../strategies/interfaces';
 import { CryptoPrice, TradingOrder } from '../types';
@@ -10,14 +11,14 @@ export class TradingBotService {
   private priceRepo: PriceRepository;
   private orderRepo: OrderRepository;
   private crashEventRepo: CrashEventRepository;
-  private tradingAPI: MockTradingAPI;
+  private tradingAPI: ITradingAPI;
   private strategies: Map<string, ITradingStrategy>;
   private isRunning = false;
   private intervalId?: NodeJS.Timeout;
   private crashStates: Map<string, boolean> = new Map();
   private recentPrices: Map<string, CryptoPrice[]> = new Map();
 
-  constructor(tradingAPI?: MockTradingAPI) {
+  constructor(tradingAPI?: ITradingAPI) {
     this.priceRepo = new PriceRepository();
     this.orderRepo = new OrderRepository();
     this.crashEventRepo = new CrashEventRepository();
@@ -236,9 +237,18 @@ export class TradingBotService {
   }
 
   /**
-   * Get the mock trading API instance (for testing/simulation)
+   * Get the trading API instance
    */
-  getMockAPI(): MockTradingAPI {
+  getTradingAPI(): ITradingAPI {
     return this.tradingAPI;
+  }
+
+  /**
+   * Close all open orders across all symbols
+   */
+  async closeAllOpenOrders(): Promise<void> {
+    console.log('[TradingBot] Closing all open orders via trading API');
+    await this.tradingAPI.closeAllOrders();
+    console.log('[TradingBot] All orders closed successfully');
   }
 }

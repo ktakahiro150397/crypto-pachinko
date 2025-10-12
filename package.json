@@ -38,6 +38,7 @@
   "dependencies": {
     "binance-historical-data": "^1.1.1",
     "dotenv": "^16.3.0",
+    "hyperliquid": "^1.7.7",
     "mysql2": "^3.6.0"
   }
 }

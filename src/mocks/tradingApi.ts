@@ -1,10 +1,11 @@
 import { TradingOrder } from '../types';
+import { ITradingAPI } from '../interfaces/ITradingAPI';
 
 /**
  * Mock trading API service
  * Simulates order execution without actual trading
  */
-export class MockTradingAPI {
+export class MockTradingAPI implements ITradingAPI {
   private orders: Map<number, TradingOrder> = new Map();
   private nextOrderId = 1;
 
@@ -65,5 +66,25 @@ export class MockTradingAPI {
     return Array.from(this.orders.values()).filter(
       (order) => order.symbol === symbol && order.status === 'OPEN'
     );
+  }
+
+  /**
+   * Close all open orders
+   */
+  async closeAllOrders(): Promise<void> {
+    const openOrders = Array.from(this.orders.values()).filter((order) => order.status === 'OPEN');
+
+    for (const order of openOrders) {
+      // Use the current entry price as exit price for simulation
+      // In a real scenario, you would use the current market price
+      order.exitPrice = order.entryPrice;
+      order.exitTimestamp = new Date();
+      order.status = 'CLOSED';
+      order.profitLoss = 0; // No profit/loss when closing at entry price
+
+      console.log(`[MockTradingAPI] Order closed (closeAll): ${JSON.stringify(order)}`);
+    }
+
+    console.log(`[MockTradingAPI] Closed ${openOrders.length} open orders`);
   }
 }
