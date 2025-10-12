@@ -375,6 +375,10 @@ HYPERLIQUID_VAULT_ADDRESS=   # Vault取引時のみ必要
 
 2. **取引ボットを起動**:
 ```bash
+# サンプルスクリプトで動作確認
+npm run hyperliquid-example
+
+# または取引ボットを起動
 npm run trading-bot
 ```
 

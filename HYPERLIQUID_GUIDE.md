@@ -52,9 +52,17 @@ HYPERLIQUID_TESTNET=true
 export TRADING_API_TYPE=hyperliquid
 export HYPERLIQUID_TESTNET=true
 
-# 取引ボットを起動
+# オプション1: サンプルスクリプトで動作確認
+npm run hyperliquid-example
+
+# オプション2: 取引ボットを起動
 npm run trading-bot
 ```
+
+サンプルスクリプト（`src/hyperliquidExample.ts`）は以下の機能を示します:
+- 注文の作成
+- 特定の注文のクローズ
+- 全注文のクローズ
 
 ### ステップ3: 本番環境への移行
 
