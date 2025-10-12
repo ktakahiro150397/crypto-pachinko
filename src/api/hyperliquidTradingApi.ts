@@ -4,6 +4,9 @@ import { ITradingAPI } from '../interfaces/ITradingAPI';
 /**
  * Hyperliquid trading API implementation
  * Executes real trades on Hyperliquid DEX
+ * 
+ * Note: This implementation uses Hyperliquid's order management system directly.
+ * Order tracking relies on Hyperliquid's API, not local state, to prevent order close mismatches.
  */
 export class HyperliquidTradingAPI implements ITradingAPI {
   private client: Hyperliquid;
@@ -122,14 +125,40 @@ export class HyperliquidTradingAPI implements ITradingAPI {
 
   /**
    * Close all open orders on Hyperliquid
+   * 
+   * IMPORTANT: This method queries Hyperliquid directly for all open orders
+   * and closes them, ensuring no order close mismatches occur.
+   * It does NOT rely on local state (orderIdMap) to prevent scenarios where
+   * local state is out of sync with actual Hyperliquid orders.
    */
   async closeAllOrders(): Promise<void> {
     try {
       await this.client.ensureInitialized();
 
-      console.log('[HyperliquidTradingAPI] Closing all open orders');
+      console.log('[HyperliquidTradingAPI] Fetching all open orders from Hyperliquid');
 
-      // Cancel all orders using Hyperliquid API
+      // Get wallet address for querying orders
+      const walletAddr = this.walletAddress || (await this.getWalletAddressFromClient());
+      
+      if (!walletAddr) {
+        throw new Error('Cannot determine wallet address for fetching open orders');
+      }
+
+      // Fetch actual open orders from Hyperliquid
+      const openOrders = await this.client.info.getUserOpenOrders(walletAddr);
+      
+      console.log(
+        `[HyperliquidTradingAPI] Found ${openOrders.length} open orders on Hyperliquid`
+      );
+
+      if (openOrders.length === 0) {
+        console.log('[HyperliquidTradingAPI] No open orders to close');
+        this.orderIdMap.clear(); // Clear local map as well
+        return;
+      }
+
+      // Cancel all orders using Hyperliquid API (this cancels ALL orders atomically)
+      console.log('[HyperliquidTradingAPI] Closing all open orders via cancelAllOrders()');
       const response = await this.client.exchange.cancelAllOrders();
 
       console.log(
@@ -137,12 +166,53 @@ export class HyperliquidTradingAPI implements ITradingAPI {
         JSON.stringify(response, null, 2)
       );
 
-      // Clear the order ID map
+      // Clear the order ID map since all orders are closed
       this.orderIdMap.clear();
 
-      console.log('[HyperliquidTradingAPI] All open orders have been closed');
+      console.log('[HyperliquidTradingAPI] All open orders have been closed successfully');
     } catch (error) {
       console.error('[HyperliquidTradingAPI] Error closing all orders:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get wallet address from the Hyperliquid client
+   * This is needed when walletAddress is not provided in constructor
+   */
+  private async getWalletAddressFromClient(): Promise<string | null> {
+    try {
+      // The Hyperliquid SDK can derive the wallet address from the private key
+      // We can access it through the client's internal state
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const address = (this.client as any).walletAddress;
+      return address || null;
+    } catch (error) {
+      console.error('[HyperliquidTradingAPI] Error getting wallet address:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get the actual open orders from Hyperliquid
+   * This method allows you to sync local state with Hyperliquid's actual state
+   */
+  async getActualOpenOrders(): Promise<unknown[]> {
+    try {
+      await this.client.ensureInitialized();
+      
+      const walletAddr = this.walletAddress || (await this.getWalletAddressFromClient());
+      
+      if (!walletAddr) {
+        throw new Error('Cannot determine wallet address for fetching open orders');
+      }
+
+      const openOrders = await this.client.info.getUserOpenOrders(walletAddr);
+      console.log(`[HyperliquidTradingAPI] Retrieved ${openOrders.length} open orders from Hyperliquid`);
+      
+      return openOrders;
+    } catch (error) {
+      console.error('[HyperliquidTradingAPI] Error getting open orders:', error);
       throw error;
     }
   }
