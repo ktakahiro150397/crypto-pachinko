@@ -162,7 +162,7 @@ export class HyperliquidTradingAPI implements ITradingAPI {
         return;
       }
 
-      // Cancel all orders individually since cancelAllOrders doesn't exist
+      // Cancel all orders individually
       console.log('[HyperliquidTradingAPI] Closing all open orders individually');
       
       const cancelRequests = openOrders.map((order: { coin: string; oid: number }) => ({
@@ -209,7 +209,7 @@ export class HyperliquidTradingAPI implements ITradingAPI {
    * Get the actual open orders from Hyperliquid
    * This method allows you to sync local state with Hyperliquid's actual state
    */
-  async getActualOpenOrders(): Promise<{ coin: string; oid: number }[]> {
+  async getActualOpenOrders(): Promise<unknown[]> {
     try {
       await this.client.ensureInitialized();
       

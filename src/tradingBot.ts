@@ -23,11 +23,12 @@ function getTradingAPI(): ITradingAPI {
       const testnet = process.env.HYPERLIQUID_TESTNET !== 'false';
       const walletAddress = process.env.HYPERLIQUID_WALLET_ADDRESS;
       const vaultAddress = process.env.HYPERLIQUID_VAULT_ADDRESS;
+      const mainWalletAddress = process.env.HYPERLIQUID_MAIN_WALLET_ADDRESS;
 
       console.log(
-        `[TradingBot] Hyperliquid config: testnet=${testnet}, walletAddress=${walletAddress || 'derived from key'}`
+        `[TradingBot] Hyperliquid config: testnet=${testnet}, walletAddress=${walletAddress || 'derived from key'}, mainWalletAddress=${mainWalletAddress || 'same as agent wallet'}`
       );
-      return new HyperliquidTradingAPI(privateKey, testnet, walletAddress, vaultAddress);
+      return new HyperliquidTradingAPI(privateKey, testnet, walletAddress, vaultAddress, mainWalletAddress);
     }
 
     case 'mock':
