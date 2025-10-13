@@ -132,13 +132,21 @@ export class TradingBotService {
    * Process trading logic for a single symbol
    */
   private async processSymbol(symbol: string): Promise<void> {
-    const strategy = this.strategies.get(symbol)!;
     const currentPrice = await this.priceRepo.getLatestPrice(symbol);
 
     if (!currentPrice) {
       console.log(`[TradingBot] No price data for ${symbol}`);
       return;
     }
+
+    await this.processSymbolWithPrice(symbol, currentPrice);
+  }
+
+  /**
+   * Process trading logic for a single symbol with a specific price (used for backtesting)
+   */
+  private async processSymbolWithPrice(symbol: string, currentPrice: CryptoPrice): Promise<void> {
+    const strategy = this.strategies.get(symbol)!;
 
     // Check for SL/TP on existing open orders first
     await this.checkStopLossAndTakeProfit(symbol, currentPrice, strategy);
@@ -164,7 +172,7 @@ export class TradingBotService {
     }
 
     if (!isInCrash) {
-      // Check for crash
+      // Check for crash (default: 3 intervals lookback)
       await this.checkForCrash(symbol, currentPrice, strategy);
     } else {
       // Check for recovery
@@ -178,36 +186,62 @@ export class TradingBotService {
   private async checkForCrash(
     symbol: string,
     currentPrice: CryptoPrice,
-    strategy: ITradingStrategy
+    strategy: ITradingStrategy,
+    lookbackCount: number = 3
   ): Promise<void> {
-    const previousDayPrice = await this.priceRepo.getPreviousDayPrice(symbol);
+    // Get recent prices from database (lookback count only, excluding current)
+    const recentPrices = await this.priceRepo.getRecentPrices(
+      symbol,
+      lookbackCount,
+      currentPrice.timestamp
+    );
 
-    if (!previousDayPrice) {
-      console.log(`[TradingBot] No previous day price for ${symbol}`);
+    if (recentPrices.length < lookbackCount) {
+      console.log(
+        `[TradingBot] Not enough price data for crash detection on ${symbol} (need ${lookbackCount}, have ${recentPrices.length})`
+      );
       return;
     }
 
-    const isCrash = strategy.crashDetection.isCrash(currentPrice.price, previousDayPrice.price);
+    // Get the oldest price in the lookback period as base price
+    // recentPrices is ordered chronologically (oldest first after reverse)
+    const basePrice = recentPrices[0]; // Oldest price in the lookback period
+
+    // Debug: Show crash detection details (reduced frequency)
+    if (Math.random() < 0.01) {
+      // Show only 1% of the time to reduce log noise
+      // console.log(
+      //   `[TradingBot] Crash detection for ${symbol}: current ${currentPrice.price}@${currentPrice.timestamp.toISOString()} vs base ${basePrice.price}@${basePrice.timestamp.toISOString()}`
+      // );
+    }
+
+    const isCrash = strategy.crashDetection.isCrash(currentPrice.price, basePrice.price);
 
     if (isCrash) {
-      const dropPercentage =
-        ((previousDayPrice.price - currentPrice.price) / previousDayPrice.price) * 100;
+      const dropPercentage = ((basePrice.price - currentPrice.price) / basePrice.price) * 100;
 
       console.log(
-        `[TradingBot] CRASH DETECTED for ${symbol}: ${dropPercentage.toFixed(2)}% drop (${previousDayPrice.price.toFixed(2)} -> ${currentPrice.price.toFixed(2)})`
+        `[TradingBot] CRASH DETECTED for ${symbol}: ${dropPercentage.toFixed(2)}% drop in ${lookbackCount} intervals (${basePrice.price.toFixed(2)} -> ${currentPrice.price.toFixed(2)})`
       );
 
       // Record crash event
       await this.crashEventRepo.insertCrashEvent({
         symbol,
         detectedTimestamp: new Date(),
-        previousDayPrice: previousDayPrice.price,
+        previousDayPrice: basePrice.price, // Note: This field represents the base price from lookback period (kept for DB compatibility)
         currentPrice: currentPrice.price,
         dropPercentage,
       });
 
       // Set crash state
       this.crashStates.set(symbol, true);
+      console.log(`[Crash State] ${symbol} is now in CRASH state, will check for recovery`);
+    } else {
+      // // Debug log when crash is not detected (reduce frequency)
+      // if (Math.random() < 0.005) {
+      //   // 0.5% of the time
+      //   console.log(`[Crash State] ${symbol} still monitoring for crash (not in crash state)`);
+      // }
     }
   }
 
@@ -220,6 +254,10 @@ export class TradingBotService {
     strategy: ITradingStrategy,
     recentPrices: CryptoPrice[]
   ): Promise<void> {
+    console.log(
+      `[Recovery Check] ${symbol} - Checking recovery with ${recentPrices.length} recent prices (current: ${currentPrice.price})`
+    );
+
     const isRecovering = strategy.recoveryDetection.isRecovering(recentPrices);
 
     if (isRecovering) {
@@ -236,6 +274,7 @@ export class TradingBotService {
 
       // Store order in database
       const order: TradingOrder = {
+        id: orderId, // Use the ID from trading API
         symbol,
         orderType: 'LONG',
         entryPrice: currentPrice.price,
@@ -243,8 +282,7 @@ export class TradingBotService {
         status: 'OPEN',
         strategy: strategy.getStrategyName(),
       };
-      const insertedOrderId = await this.orderRepo.insertOrder(order);
-      order.id = insertedOrderId;
+      await this.orderRepo.insertOrder(order);
 
       // Add to cache
       this.addOrderToCache(symbol, order);

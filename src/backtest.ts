@@ -40,7 +40,7 @@ async function main() {
 
   for (const symbol of symbols) {
     // crashThreshold=2%, recoveryIncreases=2, stopLoss=3%, takeProfit=5%
-    backtest.registerStrategy(symbol, new DefaultTradingStrategy(crashThreshold, 2, 3, 5));
+    backtest.registerStrategy(symbol, new DefaultTradingStrategy(crashThreshold, 2, 3, 10));
   }
 
   // Run backtest

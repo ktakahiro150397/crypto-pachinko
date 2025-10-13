@@ -25,8 +25,10 @@ CREATE TABLE IF NOT EXISTS trading_orders (
     status ENUM('OPEN', 'CLOSED', 'CANCELLED') NOT NULL DEFAULT 'OPEN',
     strategy VARCHAR(100) NOT NULL,
     profit_loss DECIMAL(20, 8),
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     INDEX idx_symbol_status (symbol, status),
-    INDEX idx_entry_timestamp (entry_timestamp)
+    INDEX idx_entry_timestamp (entry_timestamp),
+    INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table for tracking crash detection events

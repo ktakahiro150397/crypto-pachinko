@@ -1,5 +1,6 @@
 import { TradingOrder } from '../types';
 import { ITradingAPI } from '../interfaces/ITradingAPI';
+import { OrderRepository } from '../database/repositories';
 
 /**
  * Mock trading API service
@@ -7,14 +8,15 @@ import { ITradingAPI } from '../interfaces/ITradingAPI';
  */
 export class MockTradingAPI implements ITradingAPI {
   private orders: Map<number, TradingOrder> = new Map();
-  private nextOrderId = 1;
+  private orderRepo = new OrderRepository();
 
   /**
    * Execute a long order
    */
   async executeLongOrder(symbol: string, price: number, strategy: string): Promise<number> {
+    const nextId = await this.orderRepo.getNextOrderId();
     const order: TradingOrder = {
-      id: this.nextOrderId++,
+      id: nextId,
       symbol,
       orderType: 'LONG',
       entryPrice: price,

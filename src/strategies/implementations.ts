@@ -11,9 +11,18 @@ import { CryptoPrice } from '../types';
 export class PercentageDropCrashDetection implements ICrashDetectionStrategy {
   constructor(private thresholdPercentage: number) {}
 
-  isCrash(currentPrice: number, previousDayPrice: number): boolean {
-    const dropPercentage = ((previousDayPrice - currentPrice) / previousDayPrice) * 100;
-    return dropPercentage >= this.thresholdPercentage;
+  isCrash(currentPrice: number, basePrice: number): boolean {
+    const dropPercentage = ((basePrice - currentPrice) / basePrice) * 100;
+    const isCrashDetected = dropPercentage >= this.thresholdPercentage;
+
+    // Only log when crash is detected
+    if (isCrashDetected) {
+      console.log(
+        `[Crash Debug] CRASH DETECTED! currentPrice=${currentPrice}, basePrice=${basePrice}, drop=${dropPercentage.toFixed(2)}%, threshold=${this.thresholdPercentage}%`
+      );
+    }
+
+    return isCrashDetected;
   }
 
   getThreshold(): number {
@@ -29,17 +38,35 @@ export class ConsecutiveIncreaseRecoveryDetection implements IRecoveryDetectionS
 
   isRecovering(recentPrices: CryptoPrice[]): boolean {
     if (recentPrices.length < this.consecutiveIncreases + 1) {
+      console.log(
+        `[Recovery Debug] Not enough data: need ${this.consecutiveIncreases + 1}, have ${recentPrices.length}`
+      );
       return false;
     }
 
     // Check last N prices for consecutive increases
     const prices = recentPrices.slice(-this.consecutiveIncreases - 1);
+    console.log(
+      `[Recovery Debug] Checking ${this.consecutiveIncreases} consecutive increases with prices:`,
+      prices.map((p) => `${p.price}@${p.timestamp.toISOString().substr(11, 8)}`).join(' -> ')
+    );
+
     for (let i = 1; i < prices.length; i++) {
       if (prices[i].price <= prices[i - 1].price) {
+        console.log(
+          `[Recovery Debug] Failed at index ${i}: ${prices[i].price} <= ${prices[i - 1].price}`
+        );
         return false;
       }
     }
+    console.log(
+      `[Recovery Debug] SUCCESS: Found ${this.consecutiveIncreases} consecutive increases`
+    );
     return true;
+  }
+
+  getDescription(): string {
+    return `${this.consecutiveIncreases} consecutive increases`;
   }
 }
 

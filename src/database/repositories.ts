@@ -16,7 +16,7 @@ export class PriceRepository {
 
   async insertPrice(price: CryptoPrice): Promise<number> {
     const truncatedTimestamp = this.truncateMilliseconds(price.timestamp);
-    
+
     const query = `
       INSERT INTO crypto_prices (symbol, price, timestamp, source)
       VALUES (?, ?, ?, ?)
@@ -24,12 +24,14 @@ export class PriceRepository {
         price = VALUES(price),
         source = VALUES(source)
     `;
-    const [result] = await this.db.getPool().execute<ResultSetHeader>(query, [
-      price.symbol,
-      price.price,
-      truncatedTimestamp,
-      price.source,
-    ]);
+    const [result] = await this.db
+      .getPool()
+      .execute<ResultSetHeader>(query, [
+        price.symbol,
+        price.price,
+        truncatedTimestamp,
+        price.source,
+      ]);
     return result.insertId;
   }
 
@@ -44,10 +46,10 @@ export class PriceRepository {
         source = VALUES(source)
     `;
     const values = prices.map((p) => [
-      p.symbol, 
-      p.price, 
-      this.truncateMilliseconds(p.timestamp), 
-      p.source
+      p.symbol,
+      p.price,
+      this.truncateMilliseconds(p.timestamp),
+      p.source,
     ]);
     await this.db.getPool().query(query, [values]);
   }
@@ -83,11 +85,9 @@ export class PriceRepository {
       WHERE symbol = ? AND timestamp BETWEEN ? AND ?
       ORDER BY timestamp ASC
     `;
-    const [rows] = await this.db.getPool().execute<RowDataPacket[]>(query, [
-      symbol,
-      startTime,
-      endTime,
-    ]);
+    const [rows] = await this.db
+      .getPool()
+      .execute<RowDataPacket[]>(query, [symbol, startTime, endTime]);
 
     return rows.map((row) => ({
       symbol: row.symbol,
@@ -117,29 +117,103 @@ export class PriceRepository {
       source: row.source,
     };
   }
+
+  async getRecentPrices(
+    symbol: string,
+    limit: number,
+    excludeCurrentTimestamp?: Date
+  ): Promise<CryptoPrice[]> {
+    // LIMIT句にはプレースホルダーを使用できないため、値を直接埋め込む
+    // ただし、limitが数値であることを確認してSQLインジェクションを防ぐ
+    const limitValue = Math.max(1, Math.floor(Number(limit)));
+
+    let query = `
+      SELECT symbol, price, timestamp, source
+      FROM crypto_prices
+      WHERE symbol = ?
+    `;
+    const params: (string | Date)[] = [symbol];
+
+    // 現在のタイムスタンプを除外する場合
+    if (excludeCurrentTimestamp) {
+      query += ` AND timestamp < ?`;
+      params.push(excludeCurrentTimestamp);
+    }
+
+    query += `
+      ORDER BY timestamp DESC
+      LIMIT ${limitValue}
+    `;
+
+    const [rows] = await this.db.getPool().execute<RowDataPacket[]>(query, params);
+
+    return rows
+      .map((row) => ({
+        symbol: row.symbol,
+        price: parseFloat(row.price),
+        timestamp: new Date(row.timestamp),
+        source: row.source,
+      }))
+      .reverse(); // 古い順に並び替え（最新が先頭になるように）
+  }
 }
 
 export class OrderRepository {
   private db = Database.getInstance();
 
   async insertOrder(order: TradingOrder): Promise<number> {
-    const query = `
-      INSERT INTO trading_orders 
-      (symbol, order_type, entry_price, entry_timestamp, exit_price, exit_timestamp, status, strategy, profit_loss)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-    const [result] = await this.db.getPool().execute<ResultSetHeader>(query, [
-      order.symbol,
-      order.orderType,
-      order.entryPrice,
-      order.entryTimestamp,
-      order.exitPrice || null,
-      order.exitTimestamp || null,
-      order.status,
-      order.strategy,
-      order.profitLoss || null,
-    ]);
-    return result.insertId;
+    let query: string;
+    let params: (string | number | Date | null)[];
+
+    if (order.id) {
+      // Use provided ID (for mock API consistency)
+      query = `
+        INSERT INTO trading_orders 
+        (id, symbol, order_type, entry_price, entry_timestamp, exit_price, exit_timestamp, status, strategy, profit_loss)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      params = [
+        order.id,
+        order.symbol,
+        order.orderType,
+        order.entryPrice,
+        order.entryTimestamp,
+        order.exitPrice || null,
+        order.exitTimestamp || null,
+        order.status,
+        order.strategy,
+        order.profitLoss || null,
+      ];
+      await this.db.getPool().execute(query, params);
+      return order.id;
+    } else {
+      // Auto-generate ID
+      query = `
+        INSERT INTO trading_orders 
+        (symbol, order_type, entry_price, entry_timestamp, exit_price, exit_timestamp, status, strategy, profit_loss)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      params = [
+        order.symbol,
+        order.orderType,
+        order.entryPrice,
+        order.entryTimestamp,
+        order.exitPrice || null,
+        order.exitTimestamp || null,
+        order.status,
+        order.strategy,
+        order.profitLoss || null,
+      ];
+      const [result] = await this.db.getPool().execute<ResultSetHeader>(query, params);
+      return result.insertId;
+    }
+  }
+
+  async getNextOrderId(): Promise<number> {
+    const query = `SELECT MAX(id) as maxId FROM trading_orders`;
+    const [rows] = await this.db.getPool().execute<RowDataPacket[]>(query);
+    const maxId = rows[0]?.maxId || 0;
+    return maxId + 1;
   }
 
   async updateOrder(order: TradingOrder): Promise<void> {
@@ -150,20 +224,23 @@ export class OrderRepository {
       SET exit_price = ?, exit_timestamp = ?, status = ?, profit_loss = ?
       WHERE id = ?
     `;
-    await this.db.getPool().execute(query, [
-      order.exitPrice,
-      order.exitTimestamp,
-      order.status,
-      order.profitLoss,
-      order.id,
-    ]);
+    await this.db
+      .getPool()
+      .execute(query, [
+        order.exitPrice,
+        order.exitTimestamp,
+        order.status,
+        order.profitLoss,
+        order.id,
+      ]);
   }
 
   async getOpenOrders(symbol: string): Promise<TradingOrder[]> {
     const query = `
       SELECT id, symbol, order_type as orderType, entry_price as entryPrice, 
              entry_timestamp as entryTimestamp, exit_price as exitPrice,
-             exit_timestamp as exitTimestamp, status, strategy, profit_loss as profitLoss
+             exit_timestamp as exitTimestamp, status, strategy, profit_loss as profitLoss,
+             created_at as createdAt
       FROM trading_orders
       WHERE symbol = ? AND status = 'OPEN'
       ORDER BY entry_timestamp DESC
@@ -181,6 +258,7 @@ export class OrderRepository {
       status: row.status,
       strategy: row.strategy,
       profitLoss: row.profitLoss ? parseFloat(row.profitLoss) : undefined,
+      createdAt: new Date(row.createdAt),
     }));
   }
 }
@@ -198,13 +276,15 @@ export class CrashEventRepository {
         current_price = VALUES(current_price),
         drop_percentage = VALUES(drop_percentage)
     `;
-    const [result] = await this.db.getPool().execute<ResultSetHeader>(query, [
-      event.symbol,
-      event.detectedTimestamp,
-      event.previousDayPrice,
-      event.currentPrice,
-      event.dropPercentage,
-    ]);
+    const [result] = await this.db
+      .getPool()
+      .execute<ResultSetHeader>(query, [
+        event.symbol,
+        event.detectedTimestamp,
+        event.previousDayPrice,
+        event.currentPrice,
+        event.dropPercentage,
+      ]);
     return result.insertId;
   }
 

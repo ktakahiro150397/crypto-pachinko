@@ -8,10 +8,10 @@ export interface ICrashDetectionStrategy {
   /**
    * Determines if a crash has occurred based on price data
    * @param currentPrice Current cryptocurrency price
-   * @param previousDayPrice Price from 24 hours ago
+   * @param basePrice Previous price for comparison (e.g., price from N intervals ago)
    * @returns true if a crash is detected
    */
-  isCrash(currentPrice: number, previousDayPrice: number): boolean;
+  isCrash(currentPrice: number, basePrice: number): boolean;
 
   /**
    * Get the crash threshold percentage
@@ -30,6 +30,11 @@ export interface IRecoveryDetectionStrategy {
    * @returns true if recovery is detected
    */
   isRecovering(recentPrices: CryptoPrice[]): boolean;
+
+  /**
+   * Get a description of the recovery detection settings
+   */
+  getDescription(): string;
 }
 
 /**
