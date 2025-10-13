@@ -1,4 +1,8 @@
-import { ICrashDetectionStrategy, IRecoveryDetectionStrategy, ITradingStrategy } from './interfaces';
+import {
+  ICrashDetectionStrategy,
+  IRecoveryDetectionStrategy,
+  ITradingStrategy,
+} from './interfaces';
 import { CryptoPrice } from '../types';
 
 /**
@@ -46,17 +50,51 @@ export class ConsecutiveIncreaseRecoveryDetection implements IRecoveryDetectionS
 export class DefaultTradingStrategy implements ITradingStrategy {
   public crashDetection: ICrashDetectionStrategy;
   public recoveryDetection: IRecoveryDetectionStrategy;
+  private stopLossPercentage: number | null;
+  private takeProfitPercentage: number | null;
 
   constructor(
     crashThresholdPercentage: number = 20,
-    recoveryConsecutiveIncreases: number = 3
+    recoveryConsecutiveIncreases: number = 3,
+    stopLossPercentage: number | null = 10,
+    takeProfitPercentage: number | null = 20
   ) {
     this.crashDetection = new PercentageDropCrashDetection(crashThresholdPercentage);
     this.recoveryDetection = new ConsecutiveIncreaseRecoveryDetection(recoveryConsecutiveIncreases);
+    this.stopLossPercentage = stopLossPercentage;
+    this.takeProfitPercentage = takeProfitPercentage;
   }
 
   getStrategyName(): string {
     return 'DefaultStrategy';
+  }
+
+  getStopLossPercentage(): number | null {
+    return this.stopLossPercentage;
+  }
+
+  getTakeProfitPercentage(): number | null {
+    return this.takeProfitPercentage;
+  }
+
+  shouldTriggerStopLoss(entryPrice: number, currentPrice: number): boolean {
+    if (this.stopLossPercentage === null) {
+      return false;
+    }
+
+    // For LONG positions, stop loss triggers when price drops below entry price by SL percentage
+    const dropPercentage = ((entryPrice - currentPrice) / entryPrice) * 100;
+    return dropPercentage >= this.stopLossPercentage;
+  }
+
+  shouldTriggerTakeProfit(entryPrice: number, currentPrice: number): boolean {
+    if (this.takeProfitPercentage === null) {
+      return false;
+    }
+
+    // For LONG positions, take profit triggers when price rises above entry price by TP percentage
+    const gainPercentage = ((currentPrice - entryPrice) / entryPrice) * 100;
+    return gainPercentage >= this.takeProfitPercentage;
   }
 }
 
@@ -66,14 +104,46 @@ export class DefaultTradingStrategy implements ITradingStrategy {
 export class AggressiveTradingStrategy implements ITradingStrategy {
   public crashDetection: ICrashDetectionStrategy;
   public recoveryDetection: IRecoveryDetectionStrategy;
+  private stopLossPercentage: number | null;
+  private takeProfitPercentage: number | null;
 
-  constructor() {
+  constructor(stopLossPercentage: number | null = 7, takeProfitPercentage: number | null = 15) {
     this.crashDetection = new PercentageDropCrashDetection(10);
     this.recoveryDetection = new ConsecutiveIncreaseRecoveryDetection(2);
+    this.stopLossPercentage = stopLossPercentage;
+    this.takeProfitPercentage = takeProfitPercentage;
   }
 
   getStrategyName(): string {
     return 'AggressiveStrategy';
+  }
+
+  getStopLossPercentage(): number | null {
+    return this.stopLossPercentage;
+  }
+
+  getTakeProfitPercentage(): number | null {
+    return this.takeProfitPercentage;
+  }
+
+  shouldTriggerStopLoss(entryPrice: number, currentPrice: number): boolean {
+    if (this.stopLossPercentage === null) {
+      return false;
+    }
+
+    // For LONG positions, stop loss triggers when price drops below entry price by SL percentage
+    const dropPercentage = ((entryPrice - currentPrice) / entryPrice) * 100;
+    return dropPercentage >= this.stopLossPercentage;
+  }
+
+  shouldTriggerTakeProfit(entryPrice: number, currentPrice: number): boolean {
+    if (this.takeProfitPercentage === null) {
+      return false;
+    }
+
+    // For LONG positions, take profit triggers when price rises above entry price by TP percentage
+    const gainPercentage = ((currentPrice - entryPrice) / entryPrice) * 100;
+    return gainPercentage >= this.takeProfitPercentage;
   }
 }
 
@@ -83,13 +153,45 @@ export class AggressiveTradingStrategy implements ITradingStrategy {
 export class ConservativeTradingStrategy implements ITradingStrategy {
   public crashDetection: ICrashDetectionStrategy;
   public recoveryDetection: IRecoveryDetectionStrategy;
+  private stopLossPercentage: number | null;
+  private takeProfitPercentage: number | null;
 
-  constructor() {
+  constructor(stopLossPercentage: number | null = 15, takeProfitPercentage: number | null = 30) {
     this.crashDetection = new PercentageDropCrashDetection(30);
     this.recoveryDetection = new ConsecutiveIncreaseRecoveryDetection(5);
+    this.stopLossPercentage = stopLossPercentage;
+    this.takeProfitPercentage = takeProfitPercentage;
   }
 
   getStrategyName(): string {
     return 'ConservativeStrategy';
+  }
+
+  getStopLossPercentage(): number | null {
+    return this.stopLossPercentage;
+  }
+
+  getTakeProfitPercentage(): number | null {
+    return this.takeProfitPercentage;
+  }
+
+  shouldTriggerStopLoss(entryPrice: number, currentPrice: number): boolean {
+    if (this.stopLossPercentage === null) {
+      return false;
+    }
+
+    // For LONG positions, stop loss triggers when price drops below entry price by SL percentage
+    const dropPercentage = ((entryPrice - currentPrice) / entryPrice) * 100;
+    return dropPercentage >= this.stopLossPercentage;
+  }
+
+  shouldTriggerTakeProfit(entryPrice: number, currentPrice: number): boolean {
+    if (this.takeProfitPercentage === null) {
+      return false;
+    }
+
+    // For LONG positions, take profit triggers when price rises above entry price by TP percentage
+    const gainPercentage = ((currentPrice - entryPrice) / entryPrice) * 100;
+    return gainPercentage >= this.takeProfitPercentage;
   }
 }

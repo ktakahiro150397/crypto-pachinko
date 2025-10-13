@@ -17,6 +17,7 @@ export class TradingBotService {
   private intervalId?: NodeJS.Timeout;
   private crashStates: Map<string, boolean> = new Map();
   private recentPrices: Map<string, CryptoPrice[]> = new Map();
+  private openOrdersCache: Map<string, TradingOrder[]> = new Map();
 
   constructor(tradingAPI?: ITradingAPI) {
     this.priceRepo = new PriceRepository();
@@ -55,6 +56,9 @@ export class TradingBotService {
     this.isRunning = true;
     console.log(`[TradingBot] Starting bot for ${symbols.join(', ')}`);
 
+    // Initialize open orders cache
+    await this.initializeOpenOrdersCache(symbols);
+
     // Run immediately, then set up interval
     await this.processTradingSignals(symbols);
 
@@ -73,6 +77,42 @@ export class TradingBotService {
     }
     this.isRunning = false;
     console.log('[TradingBot] Stopped');
+  }
+
+  /**
+   * Initialize open orders cache from database
+   */
+  private async initializeOpenOrdersCache(symbols: string[]): Promise<void> {
+    for (const symbol of symbols) {
+      const openOrders = await this.orderRepo.getOpenOrders(symbol);
+      this.openOrdersCache.set(symbol, openOrders);
+      console.log(`[TradingBot] Loaded ${openOrders.length} open orders for ${symbol} into cache`);
+    }
+  }
+
+  /**
+   * Get cached open orders for a symbol
+   */
+  private getCachedOpenOrders(symbol: string): TradingOrder[] {
+    return this.openOrdersCache.get(symbol) || [];
+  }
+
+  /**
+   * Add new order to cache
+   */
+  private addOrderToCache(symbol: string, order: TradingOrder): void {
+    const orders = this.openOrdersCache.get(symbol) || [];
+    orders.push(order);
+    this.openOrdersCache.set(symbol, orders);
+  }
+
+  /**
+   * Remove order from cache
+   */
+  private removeOrderFromCache(symbol: string, orderId: number): void {
+    const orders = this.openOrdersCache.get(symbol) || [];
+    const filteredOrders = orders.filter((order) => order.id !== orderId);
+    this.openOrdersCache.set(symbol, filteredOrders);
   }
 
   /**
@@ -99,6 +139,9 @@ export class TradingBotService {
       console.log(`[TradingBot] No price data for ${symbol}`);
       return;
     }
+
+    // Check for SL/TP on existing open orders first
+    await this.checkStopLossAndTakeProfit(symbol, currentPrice, strategy);
 
     // Update recent prices
     let recentPrices = this.recentPrices.get(symbol);
@@ -200,9 +243,15 @@ export class TradingBotService {
         status: 'OPEN',
         strategy: strategy.getStrategyName(),
       };
-      await this.orderRepo.insertOrder(order);
+      const insertedOrderId = await this.orderRepo.insertOrder(order);
+      order.id = insertedOrderId;
 
-      console.log(`[TradingBot] Long order ${orderId} executed for ${symbol}`);
+      // Add to cache
+      this.addOrderToCache(symbol, order);
+
+      console.log(
+        `[TradingBot] Long order ${orderId} executed for ${symbol} with SL: ${strategy.getStopLossPercentage()}%, TP: ${strategy.getTakeProfitPercentage()}%`
+      );
 
       // Reset crash state
       this.crashStates.set(symbol, false);
@@ -213,7 +262,7 @@ export class TradingBotService {
    * Close all open orders for a symbol at current price
    */
   async closeOpenOrders(symbol: string): Promise<void> {
-    const openOrders = await this.orderRepo.getOpenOrders(symbol);
+    const openOrders = this.getCachedOpenOrders(symbol);
     const currentPrice = await this.priceRepo.getLatestPrice(symbol);
 
     if (!currentPrice) {
@@ -229,6 +278,9 @@ export class TradingBotService {
       order.profitLoss = currentPrice.price - order.entryPrice;
 
       await this.orderRepo.updateOrder(order);
+
+      // Remove from cache
+      this.removeOrderFromCache(symbol, order.id!);
 
       console.log(
         `[TradingBot] Closed order ${order.id} for ${symbol} with P/L: ${order.profitLoss.toFixed(2)}`
@@ -250,5 +302,59 @@ export class TradingBotService {
     console.log('[TradingBot] Closing all open orders via trading API');
     await this.tradingAPI.closeAllOrders();
     console.log('[TradingBot] All orders closed successfully');
+  }
+
+  /**
+   * Check stop loss and take profit conditions for open orders
+   */
+  private async checkStopLossAndTakeProfit(
+    symbol: string,
+    currentPrice: CryptoPrice,
+    strategy: ITradingStrategy
+  ): Promise<void> {
+    const openOrders = this.getCachedOpenOrders(symbol);
+
+    for (const order of openOrders) {
+      let shouldClose = false;
+      let closeReason = '';
+
+      // Check stop loss
+      if (strategy.shouldTriggerStopLoss(order.entryPrice, currentPrice.price)) {
+        shouldClose = true;
+        closeReason = 'STOP_LOSS';
+        const lossPercentage = ((order.entryPrice - currentPrice.price) / order.entryPrice) * 100;
+        console.log(
+          `[TradingBot] STOP LOSS triggered for ${symbol}: ${lossPercentage.toFixed(2)}% loss (${order.entryPrice.toFixed(2)} -> ${currentPrice.price.toFixed(2)})`
+        );
+      }
+      // Check take profit
+      else if (strategy.shouldTriggerTakeProfit(order.entryPrice, currentPrice.price)) {
+        shouldClose = true;
+        closeReason = 'TAKE_PROFIT';
+        const gainPercentage = ((currentPrice.price - order.entryPrice) / order.entryPrice) * 100;
+        console.log(
+          `[TradingBot] TAKE PROFIT triggered for ${symbol}: ${gainPercentage.toFixed(2)}% gain (${order.entryPrice.toFixed(2)} -> ${currentPrice.price.toFixed(2)})`
+        );
+      }
+
+      if (shouldClose) {
+        // Close the order
+        await this.tradingAPI.closeOrder(order.id!, currentPrice.price);
+
+        order.exitPrice = currentPrice.price;
+        order.exitTimestamp = new Date();
+        order.status = 'CLOSED';
+        order.profitLoss = currentPrice.price - order.entryPrice;
+
+        await this.orderRepo.updateOrder(order);
+
+        // Remove from cache
+        this.removeOrderFromCache(symbol, order.id!);
+
+        console.log(
+          `[TradingBot] Closed order ${order.id} for ${symbol} (${closeReason}) with P/L: ${order.profitLoss.toFixed(2)}`
+        );
+      }
+    }
   }
 }

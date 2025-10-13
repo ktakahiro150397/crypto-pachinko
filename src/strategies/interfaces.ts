@@ -40,4 +40,32 @@ export interface ITradingStrategy {
   crashDetection: ICrashDetectionStrategy;
   recoveryDetection: IRecoveryDetectionStrategy;
   getStrategyName(): string;
+
+  /**
+   * Get stop loss percentage (if set)
+   * @returns stop loss percentage or null if not set
+   */
+  getStopLossPercentage(): number | null;
+
+  /**
+   * Get take profit percentage (if set)
+   * @returns take profit percentage or null if not set
+   */
+  getTakeProfitPercentage(): number | null;
+
+  /**
+   * Check if stop loss should be triggered
+   * @param entryPrice The price at which the position was entered
+   * @param currentPrice The current market price
+   * @returns true if stop loss should be triggered
+   */
+  shouldTriggerStopLoss(entryPrice: number, currentPrice: number): boolean;
+
+  /**
+   * Check if take profit should be triggered
+   * @param entryPrice The price at which the position was entered
+   * @param currentPrice The current market price
+   * @returns true if take profit should be triggered
+   */
+  shouldTriggerTakeProfit(entryPrice: number, currentPrice: number): boolean;
 }
