@@ -16,6 +16,7 @@ export interface TradingOrder {
   status: 'OPEN' | 'CLOSED' | 'CANCELLED';
   strategy: string;
   profitLoss?: number;
+  createdAt?: Date;
 }
 
 export interface CrashEvent {

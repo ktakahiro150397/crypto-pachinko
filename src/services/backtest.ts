@@ -14,6 +14,7 @@ export class BacktestService {
   private symbols: string[];
   private startDate: Date;
   private endDate: Date;
+  private backtestStartTime: Date;
 
   constructor(startDate: Date, endDate: Date) {
     this.priceRepo = new PriceRepository();
@@ -22,6 +23,7 @@ export class BacktestService {
     this.symbols = [];
     this.startDate = new Date(startDate);
     this.endDate = new Date(endDate);
+    this.backtestStartTime = new Date(); // Record when this backtest instance was created
   }
 
   /**
@@ -39,9 +41,29 @@ export class BacktestService {
    */
   async runBacktest(intervalMs: number = 5000): Promise<BacktestResult> {
     console.log('=== Starting Backtest ===');
-    console.log(`Period: ${this.startDate.toISOString()} to ${this.endDate.toISOString()}`);
+    console.log(`Backtest Execution Time: ${this.backtestStartTime.toISOString()}`);
+    console.log(`Data Period: ${this.startDate.toISOString()} to ${this.endDate.toISOString()}`);
     console.log(`Symbols: ${this.symbols.join(', ')}`);
     console.log(`Interval: ${intervalMs}ms`);
+    console.log('');
+
+    // Display strategy settings for each symbol
+    console.log('=== Strategy Settings ===');
+    for (const symbol of this.symbols) {
+      const strategy = this.tradingBot['strategies'].get(symbol);
+      if (strategy) {
+        console.log(`${symbol}:`);
+        console.log(`  Strategy: ${strategy.getStrategyName()}`);
+        console.log(
+          `  Stop Loss: ${strategy.getStopLossPercentage() !== null ? strategy.getStopLossPercentage() + '%' : 'Disabled'}`
+        );
+        console.log(
+          `  Take Profit: ${strategy.getTakeProfitPercentage() !== null ? strategy.getTakeProfitPercentage() + '%' : 'Disabled'}`
+        );
+        console.log(`  Crash Detection Threshold: ${strategy.crashDetection.getThreshold()}%`);
+        console.log(`  Recovery Detection: ${strategy.recoveryDetection.getDescription()}`);
+      }
+    }
     console.log('');
 
     // Initialize trading bot for backtest (without starting interval)
@@ -55,7 +77,7 @@ export class BacktestService {
     // Insert historical prices into database for the trading bot to read
     let totalPrices = 0;
     const startTime = Date.now();
-    
+
     // Process data in chronological order
     while (this.historicalAPI.hasMoreData(this.symbols[0])) {
       const prices: CryptoPrice[] = [];
@@ -67,13 +89,21 @@ export class BacktestService {
           if (nextPrice) {
             // Get the price value and advance index
             const price = await this.historicalAPI.getCurrentPrice(symbol);
-            prices.push({
+            const priceData = {
               symbol,
               price,
               timestamp: nextPrice.timestamp,
               source: 'backtest',
-            });
+            };
+            prices.push(priceData);
             totalPrices++;
+
+            // Debug: Log first few prices to verify data progression
+            if (totalPrices <= 5) {
+              console.log(
+                `[Backtest] Processing price #${totalPrices}: ${symbol} = ${price} @ ${nextPrice.timestamp.toISOString()}`
+              );
+            }
           }
         }
       }
@@ -82,8 +112,8 @@ export class BacktestService {
         // Store prices in database
         await this.priceRepo.insertPrices(prices);
 
-        // Process trading signals
-        await this.processTradingSignalsForBacktest();
+        // Process trading signals with current prices
+        await this.processTradingSignalsForBacktest(prices);
 
         // Show progress every 100 iterations
         if (totalPrices % 100 === 0) {
@@ -118,7 +148,7 @@ export class BacktestService {
     // Initialize recentPrices and crashStates for all symbols
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tradingBotAny = this.tradingBot as any;
-    
+
     for (const symbol of this.symbols) {
       if (!tradingBotAny.strategies.has(symbol)) {
         throw new Error(`No strategy registered for ${symbol}`);
@@ -126,19 +156,22 @@ export class BacktestService {
       tradingBotAny.recentPrices.set(symbol, []);
       tradingBotAny.crashStates.set(symbol, false);
     }
-    
+
     console.log(`[Backtest] Initialized trading bot for ${this.symbols.join(', ')}`);
   }
 
   /**
    * Process trading signals without real-time delay
    */
-  private async processTradingSignalsForBacktest(): Promise<void> {
+  private async processTradingSignalsForBacktest(currentPrices: CryptoPrice[]): Promise<void> {
     // Use reflection to call private method (for backtest only)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tradingBotAny = this.tradingBot as any;
-    if (tradingBotAny.processTradingSignals) {
-      await tradingBotAny.processTradingSignals(this.symbols);
+    if (tradingBotAny.processSymbolWithPrice) {
+      // Process each symbol with its current price
+      for (const priceData of currentPrices) {
+        await tradingBotAny.processSymbolWithPrice(priceData.symbol, priceData);
+      }
     }
   }
 
@@ -162,25 +195,27 @@ export class BacktestService {
 
     for (const symbol of this.symbols) {
       const orders = await this.tradingBot['orderRepo'].getOpenOrders(symbol);
-      
+
       // Close any open orders at the end of backtest
       if (orders.length > 0) {
         await this.tradingBot.closeOpenOrders(symbol);
       }
 
-      // Get all orders for this symbol (we need to query all, not just open)
-      // This is a simplified version - in a real implementation, you'd add a method to get all orders
+      // Get all orders for this symbol created during this backtest execution
       const db = this.tradingBot['orderRepo']['db'];
       const query = `
         SELECT id, symbol, order_type as orderType, entry_price as entryPrice,
                entry_timestamp as entryTimestamp, exit_price as exitPrice,
-               exit_timestamp as exitTimestamp, status, strategy, profit_loss as profitLoss
+               exit_timestamp as exitTimestamp, status, strategy, profit_loss as profitLoss,
+               created_at as createdAt
         FROM trading_orders
-        WHERE symbol = ?
+        WHERE symbol = ? AND created_at >= ?
         ORDER BY entry_timestamp ASC
       `;
-      const [rows] = await db.getPool().execute(query, [symbol]);
-      
+      const [rows] = await db
+        .getPool()
+        .execute(query, [symbol, this.backtestStartTime.toISOString()]);
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       for (const row of rows as any[]) {
         const profitLoss = row.profitLoss ? parseFloat(row.profitLoss) : 0;
@@ -206,9 +241,8 @@ export class BacktestService {
       }
     }
 
-    result.winRate = result.totalTrades > 0 
-      ? (result.profitableTrades / result.totalTrades) * 100 
-      : 0;
+    result.winRate =
+      result.totalTrades > 0 ? (result.profitableTrades / result.totalTrades) * 100 : 0;
 
     return result;
   }
@@ -226,18 +260,19 @@ export class BacktestService {
     console.log(`Total Loss: $${result.totalLoss.toFixed(2)}`);
     console.log(`Net Profit: $${result.netProfit.toFixed(2)}`);
     console.log('');
-    
+
     if (result.trades.length > 0) {
       console.log('=== Trade Details ===');
       result.trades.forEach((trade, index) => {
         const status = trade.exitPrice ? 'CLOSED' : 'OPEN';
-        const plStr = trade.profitLoss > 0 
-          ? `+$${trade.profitLoss.toFixed(2)}` 
-          : `-$${Math.abs(trade.profitLoss).toFixed(2)}`;
+        const plStr =
+          trade.profitLoss > 0
+            ? `+$${trade.profitLoss.toFixed(2)}`
+            : `-$${Math.abs(trade.profitLoss).toFixed(2)}`;
         console.log(
           `${index + 1}. ${trade.symbol} [${status}] Entry: $${trade.entryPrice.toFixed(2)} | ` +
-          `Exit: ${trade.exitPrice ? '$' + trade.exitPrice.toFixed(2) : 'N/A'} | ` +
-          `P/L: ${plStr} | Strategy: ${trade.strategy}`
+            `Exit: ${trade.exitPrice ? '$' + trade.exitPrice.toFixed(2) : 'N/A'} | ` +
+            `P/L: ${plStr} | Strategy: ${trade.strategy}`
         );
       });
     }
