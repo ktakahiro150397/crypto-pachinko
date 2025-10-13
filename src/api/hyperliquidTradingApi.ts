@@ -10,15 +10,17 @@ import { ITradingAPI } from '../interfaces/ITradingAPI';
  */
 export class HyperliquidTradingAPI implements ITradingAPI {
   private client: Hyperliquid;
-  private orderIdMap: Map<number, string> = new Map(); // Map internal IDs to Hyperliquid order IDs
+  private orderIdMap: Map<number, { hyperliquidOrderId: string; symbol: string }> = new Map(); // Map internal IDs to Hyperliquid order IDs and symbols
   private nextOrderId = 1;
   private walletAddress?: string;
+  private mainWalletAddress?: string; // The main wallet address for info API calls
 
   constructor(
     privateKey: string,
     testnet: boolean = true,
     walletAddress?: string,
-    vaultAddress?: string
+    vaultAddress?: string,
+    mainWalletAddress?: string
   ) {
     this.client = new Hyperliquid({
       privateKey,
@@ -28,6 +30,7 @@ export class HyperliquidTradingAPI implements ITradingAPI {
       enableWs: false, // Disable WebSocket for simpler implementation
     });
     this.walletAddress = walletAddress;
+    this.mainWalletAddress = mainWalletAddress;
   }
 
   /**
@@ -46,7 +49,7 @@ export class HyperliquidTradingAPI implements ITradingAPI {
         is_buy: true,
         sz: 0.01, // Minimum size - adjust based on requirements
         limit_px: price.toString(),
-        order_type: { limit: { tif: 'Gtc' } }, // Good-til-cancel
+        order_type: { limit: { tif: 'Gtc' as const } }, // Good-til-cancel
         reduce_only: false,
       };
 
@@ -73,7 +76,7 @@ export class HyperliquidTradingAPI implements ITradingAPI {
 
       // Map internal ID to Hyperliquid order ID
       const internalId = this.nextOrderId++;
-      this.orderIdMap.set(internalId, hyperliquidOrderId);
+      this.orderIdMap.set(internalId, { hyperliquidOrderId, symbol });
 
       console.log(
         `[HyperliquidTradingAPI] Long order executed: ID=${internalId}, HyperliquidID=${hyperliquidOrderId}, symbol=${symbol}, price=${price}, strategy=${strategy}`
@@ -95,10 +98,12 @@ export class HyperliquidTradingAPI implements ITradingAPI {
     try {
       await this.client.ensureInitialized();
 
-      const hyperliquidOrderId = this.orderIdMap.get(orderId);
-      if (!hyperliquidOrderId) {
+      const orderInfo = this.orderIdMap.get(orderId);
+      if (!orderInfo) {
         throw new Error(`Order ${orderId} not found in order map`);
       }
+
+      const { hyperliquidOrderId, symbol } = orderInfo;
 
       console.log(
         `[HyperliquidTradingAPI] Closing order ${orderId} (Hyperliquid ID: ${hyperliquidOrderId}) at ${exitPrice}`
@@ -106,7 +111,7 @@ export class HyperliquidTradingAPI implements ITradingAPI {
 
       // Cancel the order
       const cancelResponse = await this.client.exchange.cancelOrder({
-        coin: '', // Will be filled by SDK
+        coin: symbol,
         o: parseInt(hyperliquidOrderId),
       });
 
@@ -137,8 +142,8 @@ export class HyperliquidTradingAPI implements ITradingAPI {
 
       console.log('[HyperliquidTradingAPI] Fetching all open orders from Hyperliquid');
 
-      // Get wallet address for querying orders
-      const walletAddr = this.walletAddress || (await this.getWalletAddressFromClient());
+      // Get wallet address for querying orders - use main wallet address if provided
+      const walletAddr = this.mainWalletAddress || this.walletAddress || (await this.getWalletAddressFromClient());
       
       if (!walletAddr) {
         throw new Error('Cannot determine wallet address for fetching open orders');
@@ -157,14 +162,21 @@ export class HyperliquidTradingAPI implements ITradingAPI {
         return;
       }
 
-      // Cancel all orders using Hyperliquid API (this cancels ALL orders atomically)
-      console.log('[HyperliquidTradingAPI] Closing all open orders via cancelAllOrders()');
-      const response = await this.client.exchange.cancelAllOrders();
+      // Cancel all orders individually since cancelAllOrders doesn't exist
+      console.log('[HyperliquidTradingAPI] Closing all open orders individually');
+      
+      const cancelRequests = openOrders.map((order: { coin: string; oid: number }) => ({
+        coin: order.coin,
+        o: order.oid
+      }));
 
-      console.log(
-        `[HyperliquidTradingAPI] All orders closed:`,
-        JSON.stringify(response, null, 2)
-      );
+      if (cancelRequests.length > 0) {
+        const response = await this.client.exchange.cancelOrder(cancelRequests);
+        console.log(
+          `[HyperliquidTradingAPI] All orders closed:`,
+          JSON.stringify(response, null, 2)
+        );
+      }
 
       // Clear the order ID map since all orders are closed
       this.orderIdMap.clear();
@@ -197,11 +209,11 @@ export class HyperliquidTradingAPI implements ITradingAPI {
    * Get the actual open orders from Hyperliquid
    * This method allows you to sync local state with Hyperliquid's actual state
    */
-  async getActualOpenOrders(): Promise<unknown[]> {
+  async getActualOpenOrders(): Promise<{ coin: string; oid: number }[]> {
     try {
       await this.client.ensureInitialized();
       
-      const walletAddr = this.walletAddress || (await this.getWalletAddressFromClient());
+      const walletAddr = this.mainWalletAddress || this.walletAddress || (await this.getWalletAddressFromClient());
       
       if (!walletAddr) {
         throw new Error('Cannot determine wallet address for fetching open orders');
@@ -213,6 +225,42 @@ export class HyperliquidTradingAPI implements ITradingAPI {
       return openOrders;
     } catch (error) {
       console.error('[HyperliquidTradingAPI] Error getting open orders:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get available assets and their metadata
+   */
+  async getAvailableAssets(): Promise<{ name: string; maxLeverage: number; szDecimals: number }[]> {
+    try {
+      await this.client.ensureInitialized();
+      const meta = await this.client.info.perpetuals.getMeta();
+      
+      if (meta && meta.universe) {
+        return meta.universe.map((asset: { name: string; maxLeverage: number; szDecimals: number }) => ({
+          name: asset.name,
+          maxLeverage: asset.maxLeverage,
+          szDecimals: asset.szDecimals
+        }));
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('[HyperliquidTradingAPI] Error getting available assets:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get current market prices for all assets
+   */
+  async getAllMids(): Promise<Record<string, string>> {
+    try {
+      await this.client.ensureInitialized();
+      return await this.client.info.getAllMids();
+    } catch (error) {
+      console.error('[HyperliquidTradingAPI] Error getting market prices:', error);
       throw error;
     }
   }
